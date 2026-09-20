@@ -20,6 +20,10 @@ const dmMono = DM_Mono({
 export const metadata: Metadata = {
   title: "xoxod33p store | COD4 servers and mods",
   description: "Private COD4 servers, custom mods, and direct operator support.",
+  icons: {
+    icon: [{ url: "/icon.png", type: "image/png" }],
+    shortcut: ["/icon.png"],
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -22,6 +22,8 @@ type UserRecord = {
 
 export type AuthUser = Pick<UserRecord, "id" | "email" | "firstName" | "emailVerified">;
 
+export type AdminUser = Pick<UserRecord, "id" | "email" | "firstName" | "country" | "emailVerified" | "createdAt" | "updatedAt">;
+
 function usersCollection() {
   return getDatabase().then((database) => database.collection<UserRecord>("users"));
 }
@@ -60,6 +62,30 @@ export async function findUserByEmail(email: string) {
 export async function findUserById(id: string) {
   const collection = await usersCollection();
   return collection.findOne({ id });
+}
+
+export async function listAdminUsers(): Promise<AdminUser[]> {
+  const collection = await usersCollection();
+  const users = await collection
+    .find({}, { projection: { passwordHash: 0, verificationTokenHash: 0, verificationTokenExpiresAt: 0, passwordResetTokenHash: 0, passwordResetTokenExpiresAt: 0 } })
+    .sort({ createdAt: -1 })
+    .toArray();
+  return users.map(({ id, email, firstName, country, emailVerified, createdAt, updatedAt }) => ({
+    id,
+    email,
+    firstName,
+    country,
+    emailVerified,
+    createdAt,
+    updatedAt,
+  }));
+}
+
+export async function deleteUser(id: string) {
+  const database = await getDatabase();
+  const result = await database.collection<UserRecord>("users").deleteOne({ id });
+  if (result.deletedCount > 0) await database.collection("sessions").deleteMany({ userId: id });
+  return result.deletedCount > 0;
 }
 
 export async function createUser(input: { email: string; password: string; firstName?: string; country?: string }) {
