@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/admin";
+import { AdminNav } from "@/components/admin/admin-nav";
 
 export const dynamic = "force-dynamic";
 
@@ -10,7 +11,7 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
     <div className="admin-shell">
       <aside className="admin-sidebar">
         <Link className="admin-brand" href="/admin"><span className="brand-mark">X</span><span><strong>xoxod33p</strong><small>ADMIN CONSOLE</small></span></Link>
-        <nav className="admin-nav" aria-label="Admin navigation"><Link className="active" href="/admin">Overview</Link><Link href="/admin/products">Products</Link><Link href="/admin/orders">Orders</Link><Link href="/admin/users">Users</Link><Link href="/admin/support">Support</Link></nav>
+        <AdminNav />
         <div className="admin-sidebar-footer"><Link className="admin-store-link" href="/">Back to store <span>↗</span></Link><form action="/api/auth/sign-out" method="post"><button className="admin-sign-out admin-sidebar-sign-out" type="submit">Sign out</button></form></div>
       </aside>
       <div className="admin-content"><header className="admin-topbar"><div><span className="admin-kicker">Workspace</span><strong>Store operations</strong></div><div className="admin-user"><span>{user.firstName ?? user.email}</span></div></header>{children}</div>

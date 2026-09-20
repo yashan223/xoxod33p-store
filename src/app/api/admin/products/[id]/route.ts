@@ -8,7 +8,7 @@ export async function PATCH(request: Request, context: RouteContext) {
   await requireAdmin();
   const { id } = await context.params;
   const body = await request.json() as Record<string, unknown>;
-  const allowed = ["name", "description", "meta", "price", "type", "accent", "imageUrl", "active", "available", "tag"];
+  const allowed = ["name", "description", "meta", "price", "type", "accent", "active", "available", "tag"];
   const update = Object.fromEntries(Object.entries(body).filter(([key, value]) => allowed.includes(key) && value !== undefined));
   if (typeof update.name === "string") update.name = update.name.trim();
   if (typeof update.description === "string") update.description = update.description.trim();

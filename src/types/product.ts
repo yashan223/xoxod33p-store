@@ -10,6 +10,8 @@ export type Product = {
   tag?: string;
   accent: string;
   imageUrl?: string;
+  imageKey?: string;
+  imageContentType?: string;
   active: boolean;
   available?: boolean;
   downloadKey?: string;
