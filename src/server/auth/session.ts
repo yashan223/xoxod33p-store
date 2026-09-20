@@ -47,7 +47,7 @@ export async function clearSession() {
   cookieStore.delete(cookieName);
 }
 
-export async function getCurrentUser(): Promise<AuthUser | null> {
+export async function getCurrentSession(): Promise<{ user: AuthUser; rememberMe: boolean } | null> {
   const token = (await cookies()).get(cookieName)?.value;
   if (!token) return null;
   const collection = await sessionsCollection();
@@ -55,7 +55,15 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   if (!session) return null;
   const user = await findUserById(session.userId);
   if (!user || !user.emailVerified) return null;
-  return { id: user.id, email: user.email, firstName: user.firstName, emailVerified: user.emailVerified };
+  return {
+    user: { id: user.id, email: user.email, firstName: user.firstName, emailVerified: user.emailVerified },
+    rememberMe: session.expiresAt.getTime() - session.createdAt.getTime() > temporarySessionLifetimeMs,
+  };
+}
+
+export async function getCurrentUser(): Promise<AuthUser | null> {
+  const session = await getCurrentSession();
+  return session?.user ?? null;
 }
 
 export async function requireUser(returnTo = "/") {

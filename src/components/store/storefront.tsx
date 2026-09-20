@@ -27,6 +27,8 @@ const faqItems = [
   { question: "Can I get help after purchasing?", answer: "Yes. Every purchase includes operator support for setup, configuration, and getting your community online." },
 ];
 
+type CartItem = { productId: string; quantity: number };
+
 function formatPrice(price: number) {
   return `Rs. ${price.toLocaleString("en-LK")}`;
 }
@@ -36,10 +38,11 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
   const checkoutReference = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
-  const [cart, setCart] = useState<string[]>([]);
+  const [cart, setCart] = useState<CartItem[]>([]);
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
+  const [activeSection, setActiveSection] = useState("catalog");
   const [checkoutState, setCheckoutState] = useState<"idle" | "loading" | "error">("idle");
 
   useEffect(() => {
@@ -47,6 +50,17 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     updateScrollState();
     window.addEventListener("scroll", updateScrollState, { passive: true });
     return () => window.removeEventListener("scroll", updateScrollState);
+  }, []);
+
+  useEffect(() => {
+    const sections = ["home", "catalog", "faq", "contact"].map((id) => document.getElementById(id)).filter((section): section is HTMLElement => Boolean(section));
+    const observer = new IntersectionObserver((entries) => {
+      const visibleSection = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+      if (visibleSection) setActiveSection(visibleSection.target.id);
+    }, { rootMargin: "-25% 0px -55%", threshold: [0.1, 0.5, 1] });
+
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
   }, []);
 
   const visibleProducts = useMemo(() => {
@@ -58,15 +72,30 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     });
   }, [category, products, query]);
 
-  const cartProducts = products.filter((product) => cart.includes(product.id));
-  const cartTotal = cartProducts.reduce((total, product) => total + product.price, 0);
+  const cartProducts = cart.flatMap((item) => {
+    const product = products.find((candidate) => candidate.id === item.productId);
+    return product ? [{ product, quantity: item.quantity }] : [];
+  });
+  const cartTotal = cartProducts.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const cartQuantity = cart.reduce((total, item) => total + item.quantity, 0);
 
   function addToCart(productId: string) {
-    setCart((currentCart) => currentCart.includes(productId) ? currentCart : [...currentCart, productId]);
+    const product = products.find((item) => item.id === productId);
+    setCart((currentCart) => {
+      const existing = currentCart.find((item) => item.productId === productId);
+      if (!existing) return [...currentCart, { productId, quantity: 1 }];
+      if (product?.type !== "server") return currentCart;
+      return currentCart.map((item) => item.productId === productId ? { ...item, quantity: Math.min(item.quantity + 1, 99) } : item);
+    });
   }
 
   function removeFromCart(productId: string) {
-    setCart((currentCart) => currentCart.filter((id) => id !== productId));
+    setCart((currentCart) => currentCart.filter((item) => item.productId !== productId));
+  }
+
+  function updateCartQuantity(productId: string, quantity: number) {
+    if (quantity < 1) return removeFromCart(productId);
+    setCart((currentCart) => currentCart.map((item) => item.productId === productId ? { ...item, quantity: Math.min(quantity, 99) } : item));
   }
 
   async function startCheckout() {
@@ -76,7 +105,7 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: `loadout-${checkoutReference}`, items: cartProducts.map((product) => ({ productId: product.id, quantity: 1 })) }),
+        body: JSON.stringify({ orderId: `loadout-${checkoutReference}`, items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })) }),
       });
       const result = (await response.json()) as { orderId?: string; error?: string };
       if (!response.ok || !result.orderId) throw new Error(result.error ?? "Request unavailable");
@@ -90,8 +119,8 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     <main className="store-shell">
       <header className={cn("site-header", isScrolled && "site-header-scrolled")} id="storefront">
         <a className="brand" href="#storefront" aria-label="xoxod33p store home"><Image src="/logo.png" alt="xoxod33p store" className="brand-logo" width={120} height={30} /></a>
-        <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation"><a href="#home" onClick={() => setIsMenuOpen(false)}>Home</a><a className="active" href="#catalog" onClick={() => setIsMenuOpen(false)}>Shop</a><a href="#faq" onClick={() => setIsMenuOpen(false)}>FAQ</a><a href="#contact" onClick={() => setIsMenuOpen(false)}>Contact</a></nav>
-        <div className="header-actions">{currentUser ? <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">Dashboard</Link> : <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">Sign in</Link>}<Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}><ShoppingBag size={17} /> Cart <span>{cart.length}</span></Button>{currentUser && <form action="/api/auth/sign-out" method="post"><button className="ui-button ui-button-ghost sign-in-button" type="submit">Sign out</button></form>}<Button variant="ghost" size="icon" className="menu-button" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X size={20} /> : <Menu size={20} />}</Button></div>
+        <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation"><a className={cn(activeSection === "home" && "active")} href="#home" onClick={() => { setActiveSection("home"); setIsMenuOpen(false); }}>Home</a><a className={cn(activeSection === "catalog" && "active")} href="#catalog" onClick={() => { setActiveSection("catalog"); setIsMenuOpen(false); }}>Shop</a><a className={cn(activeSection === "faq" && "active")} href="#faq" onClick={() => { setActiveSection("faq"); setIsMenuOpen(false); }}>FAQ</a><a className={cn(activeSection === "contact" && "active")} href="#contact" onClick={() => { setActiveSection("contact"); setIsMenuOpen(false); }}>Contact</a></nav>
+        <div className="header-actions">{currentUser ? <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">Dashboard</Link> : <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">Sign in</Link>}<Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}><ShoppingBag size={17} /> Cart <span>{cartQuantity}</span></Button>{currentUser && <form action="/api/auth/sign-out" method="post"><button className="ui-button ui-button-ghost sign-in-button" type="submit">Sign out</button></form>}<Button variant="ghost" size="icon" className="menu-button" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X size={20} /> : <Menu size={20} />}</Button></div>
       </header>
 
       <section className="brand-intro" id="home" aria-label="Welcome to xoxod33p store">
@@ -114,19 +143,19 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
         <div className="brand-intro-content">
           <Image src="/logo.png" alt="xoxod33p store" className="intro-logo" width={560} height={150} priority />
           <p>Build your ideal COD4 experience with reliable servers, battle-tested mods, and support that keeps your community in the game.</p>
-          <a className="intro-enter" href="#storefront">Explore the store <ArrowRight size={16} /></a>
+          <a className="intro-enter" href="#catalog">Explore the store <ArrowRight size={16} /></a>
         </div>
         <span className="intro-corner intro-corner-left">BUILT IN SRI LANKA / FOR PLAYERS EVERYWHERE</span>
         <span className="intro-corner intro-corner-right">SERVERS / MODS / SUPPORT</span>
       </section>
 
-      <section className="catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">Shop the collection</p><h2>Find your Products</h2></div></div><div className="catalog-toolbar"><div className="category-tabs" role="tablist" aria-label="Product categories">{categories.map((item) => <button className={cn(category === item.id && "selected")} key={item.id} onClick={() => setCategory(item.id)} role="tab" aria-selected={category === item.id} type="button">{item.label}</button>)}</div><label className="search-field"><Search size={16} /><Input type="search" placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} /></label></div><div className="product-grid">{visibleProducts.map((product) => { const inCart = cart.includes(product.id); const isService = product.type === "service"; return <Card className="product-card" key={product.id} onClick={() => router.push(`/products/${product.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`/products/${product.id}`); }} role="link" tabIndex={0}><div className={cn("product-art", `product-art-${product.accent}`)}><span className="product-art-label">{product.type === "server" ? "SERVER" : product.type === "service" ? "SERVICE" : "MOD PACK"}</span><div className="product-art-symbol">{product.type === "server" ? <Server size={42} strokeWidth={1.4} /> : product.type === "service" ? <Wrench size={42} strokeWidth={1.4} /> : <PackageCheck size={42} strokeWidth={1.4} />}</div>{product.tag && <Badge>{product.tag}</Badge>}</div><CardContent><div className="product-info"><div><h3>{product.name}</h3><p>{product.description}</p></div><div className="product-meta"><strong>{formatPrice(product.price)}<small>{product.type === "server" ? " / month" : isService ? " one-time setup" : " one-time"}</small></strong></div></div><Button variant={inCart ? "secondary" : "outline"} className="add-button" onClick={(event) => { event.stopPropagation(); addToCart(product.id); }}>{inCart ? <><Check size={15} /> Added</> : <>Add to cart <ArrowRight size={15} /></>}</Button></CardContent></Card>; })}</div>{visibleProducts.length === 0 && <p className="empty-state">No products match your search.</p>}</section>
+      <section className="catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">Shop the collection</p><h2>Find your Products</h2></div></div><div className="catalog-toolbar"><div className="category-tabs" role="tablist" aria-label="Product categories">{categories.map((item) => <button className={cn(category === item.id && "selected")} key={item.id} onClick={() => setCategory(item.id)} role="tab" aria-selected={category === item.id} type="button">{item.label}</button>)}</div><label className="search-field"><Search size={16} /><Input type="search" placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} /></label></div><div className="product-grid">{visibleProducts.map((product) => { const inCart = cart.some((item) => item.productId === product.id); const isService = product.type === "service"; return <Card className="product-card" key={product.id} onClick={() => router.push(`/products/${product.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`/products/${product.id}`); }} role="link" tabIndex={0}><div className={cn("product-art", `product-art-${product.accent}`)}><span className="product-art-label">{product.type === "server" ? "SERVER" : product.type === "service" ? "SERVICE" : "MOD PACK"}</span><div className="product-art-symbol">{product.type === "server" ? <Server size={42} strokeWidth={1.4} /> : product.type === "service" ? <Wrench size={42} strokeWidth={1.4} /> : <PackageCheck size={42} strokeWidth={1.4} />}</div>{product.tag && <Badge>{product.tag}</Badge>}</div><CardContent><div className="product-info"><div><h3>{product.name}</h3><p>{product.description}</p></div><div className="product-meta"><strong>{formatPrice(product.price)}<small>{product.type === "server" ? " / month" : isService ? " one-time setup" : " one-time"}</small></strong></div></div><Button variant={inCart ? "secondary" : "outline"} className="add-button" onClick={(event) => { event.stopPropagation(); addToCart(product.id); }}>{inCart ? <><Check size={15} /> Added</> : <>Add to cart <ArrowRight size={15} /></>}</Button></CardContent></Card>; })}</div>{visibleProducts.length === 0 && <p className="empty-state">No products match your search.</p>}</section>
 
       <section className="faq-section" id="faq"><div className="faq-heading"><p className="section-kicker">Quick answers</p><h2>Everything you need<br />before game time.</h2></div><div className="faq-list">{faqItems.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></section>
 
       <footer className="site-footer" id="contact"><div className="footer-top"><div className="footer-brand"><Image src="/logo.png" alt="xoxod33p store" className="footer-logo" width={160} height={34} /></div></div><div className="footer-links"><div><span>Store</span><a href="#catalog">All products</a><a href="#catalog">Game servers</a><a href="#catalog">Mods & tools</a></div><div><span>Company</span><a href="#faq">FAQ</a><a href="#contact">Contact</a></div><div><span>Legal</span><Link href="/terms">Terms & Conditions</Link><Link href="/refund-policy">No Refund Policy</Link></div><div><span>Contact</span><a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a><a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">WhatsApp: +94 77 123 4567</a><small>Response within one business day.</small></div></div><div className="footer-bottom"><span>© 2026 xoxod33p store. Built for better game nights.</span><span className="footer-code">SERVERS / MODS / SUPPORT</span></div></footer>
 
-      {isCartOpen && <div className="cart-overlay" role="presentation" onClick={() => setIsCartOpen(false)}><aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><p className="section-kicker">Your selection</p><h2>Shopping cart</h2></div><Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)} aria-label="Close shopping cart"><X size={20} /></Button></div>{cartProducts.length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>Your cart is empty.</p><span>Add a server, tool, or service to get started.</span></div> : <div className="drawer-items">{cartProducts.map((product) => <div className="drawer-item" key={product.id}><div><strong>{product.name}</strong><span>{product.type === "server" ? "Game server" : product.type === "service" ? "Setup service" : "Mod or tool"}</span></div><div><b>{formatPrice(product.price)}</b><Button variant="ghost" size="icon" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}><Trash2 size={15} /></Button></div></div>)}</div>}<div className="drawer-footer"><div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><Button className="checkout-button" disabled={cartProducts.length === 0 || checkoutState === "loading"} onClick={startCheckout}>{checkoutState === "loading" ? "Submitting request..." : "Request server"}<ArrowRight size={16} /></Button><small>{checkoutState === "error" ? "Unable to submit your request. Please try again." : "An operator will review your request before payment."}</small></div></aside></div>}
+      {isCartOpen && <div className="cart-overlay" role="presentation" onClick={() => setIsCartOpen(false)}><aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><p className="section-kicker">Your selection</p><h2>Shopping cart</h2></div><Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)} aria-label="Close shopping cart"><X size={20} /></Button></div>{cartProducts.length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>Your cart is empty.</p><span>Add a server, tool, or service to get started.</span></div> : <div className="drawer-items">{cartProducts.map(({ product, quantity }) => <div className="drawer-item" key={product.id}><div><strong>{product.name}</strong><span>{product.type === "server" ? "Game server" : product.type === "service" ? "Setup service" : "Mod or tool"}</span></div><div className="drawer-item-actions"><b>{formatPrice(product.price * quantity)}</b>{product.type === "server" && <div className="quantity-control" aria-label={`${product.name} quantity`}><Button variant="ghost" size="icon" onClick={() => updateCartQuantity(product.id, quantity - 1)} aria-label={`Decrease ${product.name} quantity`}>-</Button><span>{quantity}</span><Button variant="ghost" size="icon" onClick={() => updateCartQuantity(product.id, quantity + 1)} aria-label={`Increase ${product.name} quantity`}>+</Button></div>}<Button variant="ghost" size="icon" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}><Trash2 size={15} /></Button></div></div>)}</div>}<div className="drawer-footer"><div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><Button className="checkout-button" disabled={cartProducts.length === 0 || checkoutState === "loading"} onClick={startCheckout}>{checkoutState === "loading" ? "Submitting request..." : "Request server"}<ArrowRight size={16} /></Button><small>{checkoutState === "error" ? "Unable to submit your request. Please try again." : "An operator will review your request before payment."}</small></div></aside></div>}
     </main>
   );
 }

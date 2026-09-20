@@ -80,13 +80,13 @@ export function AuthForm({ mode }: AuthFormProps) {
       <form className="auth-fields" onSubmit={submit}>
         {isSignUp && <label>Full name<Input autoComplete="name" value={firstName} onChange={(event) => setFirstName(event.target.value)} /></label>}
         {isSignUp && <label>Country<select value={country} onChange={(event) => setCountry(event.target.value)} required><option value="">Select your country</option><option value="Sri Lanka">Sri Lanka</option><option value="India">India</option><option value="Pakistan">Pakistan</option><option value="Bangladesh">Bangladesh</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Australia">Australia</option><option value="Other">Other</option></select></label>}
-        {isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required /> I agree to the <Link href="/terms">Terms & Conditions</Link> and <Link href="/refund-policy">No Refund Policy</Link></label>}
         <label>Email address<Input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
         <label>Password<div className="password-field"><Input type={showPassword ? "text" : "password"} autoComplete={isSignUp ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>
         {!isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Remember me</label>}
         {!isSignUp && <Link className="auth-forgot-link" href="/forgot-password">Forgot password?</Link>}
         {error && <p className="auth-message auth-error">{error}</p>}
         {notice && <p className="auth-message auth-success">{notice}</p>}
+        {isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required /> I agree to the <Link href="/terms">Terms & Conditions</Link> and <Link href="/refund-policy">No Refund Policy</Link></label>}
         <Button type="submit" disabled={isLoading}>{isLoading ? "Please wait..." : isSignUp ? "Create account" : "Sign in"}</Button>
         {canResend && <button className="auth-resend" type="button" onClick={resendVerification}>Resend verification email</button>}
       </form>

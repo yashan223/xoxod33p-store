@@ -11,6 +11,7 @@
     "db:down": "docker compose stop mongodb",
     "db:logs": "docker compose logs -f mongodb",
     "db:status": "docker compose ps mongodb",
+    "db:seed": "tsx scripts/seed-products.ts",
     "db:clear-seed": "tsx scripts/clear-seed-data.ts"
   },
   "dependencies": {

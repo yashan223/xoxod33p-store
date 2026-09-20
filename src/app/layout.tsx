@@ -2,6 +2,8 @@ import type { Metadata } from "next";
 import { DM_Mono, Manrope, Geist } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { getCurrentSession } from "@/server/auth/session";
+import { InactivityLogout } from "@/components/auth/inactivity-logout";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -26,14 +28,16 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default async function RootLayout({ children }: LayoutProps<"/">) {
+  const currentSession = await getCurrentSession();
+
   return (
     <html
       lang="en"
       className={cn("h-full", "antialiased", manrope.variable, dmMono.variable, "font-sans", geist.variable)}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col"><InactivityLogout enabled={Boolean(currentSession && !currentSession.rememberMe)} />{children}</body>
     </html>
   );
 }

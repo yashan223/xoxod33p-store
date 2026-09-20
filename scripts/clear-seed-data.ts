@@ -4,7 +4,7 @@ import { MongoClient } from "mongodb";
 dotenv.config({ path: ".env.local" });
 
 const uri = process.env.MONGODB_URI;
-const databaseName = process.env.MONGODB_DB ?? "dropzone";
+const databaseName = process.env.MONGODB_DB ?? "xoxod33p-store";
 const seededProductIds = [
   "frontline-20",
   "frontline-40",

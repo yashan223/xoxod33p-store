@@ -10,7 +10,7 @@ type Order = {
   email: string;
   status: string;
   paymentStatus: string;
-  items: { productId: string; name: string; quantity: number; unitPrice: number }[];
+  items: { productId: string; name: string; type: string; quantity: number; unitPrice: number }[];
   messages: { id: string; senderRole: "customer" | "admin"; body: string; createdAt: string | Date }[];
 };
 
@@ -95,7 +95,8 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
     <section className="order-chat"><div className="order-chat-header"><div><span className="admin-kicker">Order {order.id}</span><h1>{admin ? order.email : "Your order request"}</h1></div><span className="order-status">{status.replace("_", " ")}</span></div>
       <div className="order-items">{order.items.map((item) => <div key={item.productId}><strong>{item.name}</strong><span>{item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}{admin && <ProductFileUpload productId={item.productId} />}</span></div>)}</div>
       {!admin && status === "accepted" && order.paymentStatus === "pending" && <div className="order-payment-callout"><div><strong>Your request was accepted.</strong><span>Complete payment to start delivery.</span></div><Button onClick={startPayment} disabled={isPaying}>{isPaying ? "Opening payment..." : "Pay for request"}<ArrowRight size={15} /></Button>{paymentError && <small>{paymentError}</small>}</div>}
-      {!admin && order.paymentStatus === "paid" && <Link className="order-download-center" href={`/orders/${order.id}/downloads`}>Open download center</Link>}
+      {!admin && order.paymentStatus === "paid" && order.items.some((item) => item.type === "server") && <p className="order-delivery-note">Payment received. An admin will deliver your server details through this message thread.</p>}
+      {!admin && order.paymentStatus === "paid" && order.items.some((item) => item.type === "mod") && <Link className="order-download-center" href={`/orders/${order.id}/downloads`}>Open download center</Link>}
       {admin && <div className="order-status-actions">{["requested", "accepted", "in_progress", "completed", "cancelled"].map((option) => <Button key={option} variant={status === option ? "default" : "outline"} size="sm" onClick={() => changeStatus(option)}>{option.replace("_", " ")}</Button>)}</div>}
       <div className="order-messages">{order.messages.length === 0 ? <p className="order-empty">No messages yet. Send the first update below.</p> : order.messages.map((item) => <div className={`order-message ${item.senderRole === (admin ? "admin" : "customer") ? "mine" : ""}`} key={item.id}><span>{item.senderRole === "admin" ? "Admin" : "Customer"}</span><p>{item.body}</p></div>)}</div>
       <form className="order-message-form" onSubmit={sendMessage}><textarea value={message} onChange={(event) => setMessage(event.target.value)} placeholder={admin ? "Send delivery instructions..." : "Ask a question about your order..."} maxLength={2000} /><Button type="submit" disabled={isSending || !message.trim()}>{isSending ? "Sending..." : "Send message"}</Button></form>

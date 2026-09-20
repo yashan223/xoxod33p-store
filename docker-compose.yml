@@ -8,7 +8,7 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-dropzone_admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-change-me-local}
-      MONGO_INITDB_DATABASE: ${MONGODB_DB:-dropzone}
+      MONGO_INITDB_DATABASE: ${MONGODB_DB:-xoxod33p-store}
     ports:
       - "${MONGO_PORT:-27017}:27017"
     volumes:
