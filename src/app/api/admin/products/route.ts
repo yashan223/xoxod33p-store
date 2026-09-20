@@ -14,7 +14,7 @@ function productInput(body: Record<string, unknown>) {
   const meta = typeof body.meta === "string" ? body.meta.trim() : "";
   const price = typeof body.price === "number" ? body.price : Number(body.price);
   if (!name || !description || !meta || !productTypes.includes(type as ProductType) || !Number.isInteger(price) || price < 0) return null;
-  return { type: type as ProductType, name, description, meta, price, accent: typeof body.accent === "string" && body.accent.trim() ? body.accent.trim() : "slate", imageUrl: typeof body.imageUrl === "string" ? body.imageUrl.trim() : "", active: body.active !== false };
+  return { type: type as ProductType, name, description, meta, price, accent: typeof body.accent === "string" && body.accent.trim() ? body.accent.trim() : "slate", imageUrl: typeof body.imageUrl === "string" ? body.imageUrl.trim() : "", active: body.active !== false, available: body.available !== false };
 }
 
 export async function POST(request: Request) {

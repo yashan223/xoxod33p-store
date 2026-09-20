@@ -34,6 +34,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
+      data-scroll-behavior="smooth"
       className={cn("h-full", "antialiased", manrope.variable, dmMono.variable, "font-sans", geist.variable)}
       suppressHydrationWarning
     >

@@ -28,6 +28,7 @@ const faqItems = [
 ];
 
 type CartItem = { productId: string; quantity: number };
+const cartStorageKey = "xoxod33p-cart";
 
 function formatPrice(price: number) {
   return `Rs. ${price.toLocaleString("en-LK")}`;
@@ -44,6 +45,8 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
   const [isScrolled, setIsScrolled] = useState(false);
   const [activeSection, setActiveSection] = useState("catalog");
   const [checkoutState, setCheckoutState] = useState<"idle" | "loading" | "error">("idle");
+  const [checkoutError, setCheckoutError] = useState("");
+  const [isCartHydrated, setIsCartHydrated] = useState(false);
 
   useEffect(() => {
     const updateScrollState = () => setIsScrolled(window.scrollY > 24);
@@ -63,6 +66,29 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     return () => observer.disconnect();
   }, []);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      try {
+        const storedCart = JSON.parse(window.localStorage.getItem(cartStorageKey) ?? "null") as unknown;
+        if (Array.isArray(storedCart)) {
+          setCart(storedCart.filter((item): item is CartItem => {
+            if (typeof item !== "object" || item === null || typeof item.productId !== "string" || item.quantity !== 1) return false;
+            const product = products.find((candidate) => candidate.id === item.productId);
+            return Boolean(product && !(product.type === "server" && product.available === false));
+          }));
+        }
+      } catch {
+        window.localStorage.removeItem(cartStorageKey);
+      }
+      setIsCartHydrated(true);
+    });
+    return () => window.clearTimeout(timeoutId);
+  }, [products]);
+
+  useEffect(() => {
+    if (isCartHydrated) window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
+  }, [cart, isCartHydrated]);
+
   const visibleProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
     return products.filter((product) => {
@@ -74,18 +100,17 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
 
   const cartProducts = cart.flatMap((item) => {
     const product = products.find((candidate) => candidate.id === item.productId);
-    return product ? [{ product, quantity: item.quantity }] : [];
+    return product && !(product.type === "server" && product.available === false) ? [{ product, quantity: item.quantity }] : [];
   });
   const cartTotal = cartProducts.reduce((total, item) => total + item.product.price * item.quantity, 0);
-  const cartQuantity = cart.reduce((total, item) => total + item.quantity, 0);
+  const cartQuantity = cartProducts.reduce((total, item) => total + item.quantity, 0);
 
   function addToCart(productId: string) {
     const product = products.find((item) => item.id === productId);
+    if (product?.type === "server" && product.available === false) return;
     setCart((currentCart) => {
       const existing = currentCart.find((item) => item.productId === productId);
-      if (!existing) return [...currentCart, { productId, quantity: 1 }];
-      if (product?.type !== "server") return currentCart;
-      return currentCart.map((item) => item.productId === productId ? { ...item, quantity: Math.min(item.quantity + 1, 99) } : item);
+      return existing ? currentCart : [...currentCart, { productId, quantity: 1 }];
     });
   }
 
@@ -93,32 +118,41 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     setCart((currentCart) => currentCart.filter((item) => item.productId !== productId));
   }
 
-  function updateCartQuantity(productId: string, quantity: number) {
-    if (quantity < 1) return removeFromCart(productId);
-    setCart((currentCart) => currentCart.map((item) => item.productId === productId ? { ...item, quantity: Math.min(quantity, 99) } : item));
-  }
-
   async function startCheckout() {
     if (cartProducts.length === 0 || checkoutState === "loading") return;
     setCheckoutState("loading");
+    setCheckoutError("");
     try {
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId: `loadout-${checkoutReference}`, items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })) }),
       });
+      if (response.status === 401) {
+        router.push(`/sign-in?redirect_url=${encodeURIComponent("/#catalog")}`);
+        return;
+      }
       const result = (await response.json()) as { orderId?: string; error?: string };
       if (!response.ok || !result.orderId) throw new Error(result.error ?? "Request unavailable");
-      window.location.assign(`/orders/${result.orderId}`);
-    } catch {
+      const paymentResponse = await fetch("/api/payments/checkout", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: result.orderId }),
+      });
+      const paymentResult = await paymentResponse.json() as { url?: string; error?: string };
+      if (!paymentResponse.ok || !paymentResult.url) throw new Error(paymentResult.error ?? "Unable to open payment.");
+      window.localStorage.removeItem(cartStorageKey);
+      window.location.assign(paymentResult.url);
+    } catch (error) {
       setCheckoutState("error");
+      setCheckoutError(error instanceof Error ? error.message : "Unable to open payment.");
     }
   }
 
   return (
     <main className="store-shell">
       <header className={cn("site-header", isScrolled && "site-header-scrolled")} id="storefront">
-        <a className="brand" href="#storefront" aria-label="xoxod33p store home"><Image src="/logo.png" alt="xoxod33p store" className="brand-logo" width={120} height={30} /></a>
+        <a className="brand" href="#storefront" aria-label="xoxod33p store home"><Image src="/logo.png" alt="xoxod33p store" className="brand-logo" width={120} height={30} style={{ height: "auto" }} /></a>
         <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation"><a className={cn(activeSection === "home" && "active")} href="#home" onClick={() => { setActiveSection("home"); setIsMenuOpen(false); }}>Home</a><a className={cn(activeSection === "catalog" && "active")} href="#catalog" onClick={() => { setActiveSection("catalog"); setIsMenuOpen(false); }}>Shop</a><a className={cn(activeSection === "faq" && "active")} href="#faq" onClick={() => { setActiveSection("faq"); setIsMenuOpen(false); }}>FAQ</a><a className={cn(activeSection === "contact" && "active")} href="#contact" onClick={() => { setActiveSection("contact"); setIsMenuOpen(false); }}>Contact</a></nav>
         <div className="header-actions">{currentUser ? <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">Dashboard</Link> : <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">Sign in</Link>}<Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}><ShoppingBag size={17} /> Cart <span>{cartQuantity}</span></Button>{currentUser && <form action="/api/auth/sign-out" method="post"><button className="ui-button ui-button-ghost sign-in-button" type="submit">Sign out</button></form>}<Button variant="ghost" size="icon" className="menu-button" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X size={20} /> : <Menu size={20} />}</Button></div>
       </header>
@@ -141,7 +175,7 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
           />
         </div>
         <div className="brand-intro-content">
-          <Image src="/logo.png" alt="xoxod33p store" className="intro-logo" width={560} height={150} priority />
+          <Image src="/logo.png" alt="xoxod33p store" className="intro-logo" width={560} height={150} priority style={{ height: "auto" }} />
           <p>Build your ideal COD4 experience with reliable servers, battle-tested mods, and support that keeps your community in the game.</p>
           <a className="intro-enter" href="#catalog">Explore the store <ArrowRight size={16} /></a>
         </div>
@@ -149,13 +183,13 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
         <span className="intro-corner intro-corner-right">SERVERS / MODS / SUPPORT</span>
       </section>
 
-      <section className="catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">Shop the collection</p><h2>Find your Products</h2></div></div><div className="catalog-toolbar"><div className="category-tabs" role="tablist" aria-label="Product categories">{categories.map((item) => <button className={cn(category === item.id && "selected")} key={item.id} onClick={() => setCategory(item.id)} role="tab" aria-selected={category === item.id} type="button">{item.label}</button>)}</div><label className="search-field"><Search size={16} /><Input type="search" placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} /></label></div><div className="product-grid">{visibleProducts.map((product) => { const inCart = cart.some((item) => item.productId === product.id); const isService = product.type === "service"; return <Card className="product-card" key={product.id} onClick={() => router.push(`/products/${product.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`/products/${product.id}`); }} role="link" tabIndex={0}><div className={cn("product-art", `product-art-${product.accent}`)}><span className="product-art-label">{product.type === "server" ? "SERVER" : product.type === "service" ? "SERVICE" : "MOD PACK"}</span><div className="product-art-symbol">{product.type === "server" ? <Server size={42} strokeWidth={1.4} /> : product.type === "service" ? <Wrench size={42} strokeWidth={1.4} /> : <PackageCheck size={42} strokeWidth={1.4} />}</div>{product.tag && <Badge>{product.tag}</Badge>}</div><CardContent><div className="product-info"><div><h3>{product.name}</h3><p>{product.description}</p></div><div className="product-meta"><strong>{formatPrice(product.price)}<small>{product.type === "server" ? " / month" : isService ? " one-time setup" : " one-time"}</small></strong></div></div><Button variant={inCart ? "secondary" : "outline"} className="add-button" onClick={(event) => { event.stopPropagation(); addToCart(product.id); }}>{inCart ? <><Check size={15} /> Added</> : <>Add to cart <ArrowRight size={15} /></>}</Button></CardContent></Card>; })}</div>{visibleProducts.length === 0 && <p className="empty-state">No products match your search.</p>}</section>
+      <section className="catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">Shop the collection</p><h2>Find your Products</h2></div></div><div className="catalog-toolbar"><div className="category-tabs" role="tablist" aria-label="Product categories">{categories.map((item) => <button className={cn(category === item.id && "selected")} key={item.id} onClick={() => setCategory(item.id)} role="tab" aria-selected={category === item.id} type="button">{item.label}</button>)}</div><label className="search-field"><Search size={16} /><Input type="search" placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} /></label></div><div className="product-grid">{visibleProducts.map((product) => { const inCart = cart.some((item) => item.productId === product.id); const isService = product.type === "service"; const isAvailable = product.type !== "server" || product.available !== false; return <Card className="product-card" key={product.id} onClick={() => router.push(`/products/${product.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`/products/${product.id}`); }} role="link" tabIndex={0}><div className={cn("product-art", `product-art-${product.accent}`)}><span className="product-art-label">{product.type === "server" ? "SERVER" : product.type === "service" ? "SERVICE" : "MOD PACK"}</span>{product.type === "server" && <span className={cn("product-availability", isAvailable ? "available" : "unavailable")}>{isAvailable ? "Available" : "Unavailable"}</span>}<div className="product-art-symbol">{product.type === "server" ? <Server size={42} strokeWidth={1.4} /> : product.type === "service" ? <Wrench size={42} strokeWidth={1.4} /> : <PackageCheck size={42} strokeWidth={1.4} />}</div>{product.type !== "server" && product.tag && <Badge>{product.tag}</Badge>}</div><CardContent><div className="product-info"><div><h3>{product.name}</h3><p>{product.description}</p></div><div className="product-meta"><strong>{formatPrice(product.price)}<small>{product.type === "server" ? " / month" : isService ? " one-time setup" : " one-time"}</small></strong></div></div>{product.type === "server" && !isAvailable ? <Button variant="outline" className="add-button" disabled>Unavailable</Button> : <Button variant={inCart ? "secondary" : "outline"} className="add-button" onClick={(event) => { event.stopPropagation(); addToCart(product.id); }}>{inCart ? <><Check size={15} /> Added</> : <>Add to cart <ArrowRight size={15} /></>}</Button>}</CardContent></Card>; })}</div>{visibleProducts.length === 0 && <p className="empty-state">No products match your search.</p>}</section>
 
       <section className="faq-section" id="faq"><div className="faq-heading"><p className="section-kicker">Quick answers</p><h2>Everything you need<br />before game time.</h2></div><div className="faq-list">{faqItems.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></section>
 
-      <footer className="site-footer" id="contact"><div className="footer-top"><div className="footer-brand"><Image src="/logo.png" alt="xoxod33p store" className="footer-logo" width={160} height={34} /></div></div><div className="footer-links"><div><span>Store</span><a href="#catalog">All products</a><a href="#catalog">Game servers</a><a href="#catalog">Mods & tools</a></div><div><span>Company</span><a href="#faq">FAQ</a><a href="#contact">Contact</a></div><div><span>Legal</span><Link href="/terms">Terms & Conditions</Link><Link href="/refund-policy">No Refund Policy</Link></div><div><span>Contact</span><a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a><a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">WhatsApp: +94 77 123 4567</a><small>Response within one business day.</small></div></div><div className="footer-bottom"><span>© 2026 xoxod33p store. Built for better game nights.</span><span className="footer-code">SERVERS / MODS / SUPPORT</span></div></footer>
+      <footer className="site-footer" id="contact"><div className="footer-top"><div className="footer-brand"><Image src="/logo.png" alt="xoxod33p store" className="footer-logo" width={160} height={34} style={{ height: "auto" }} /></div></div><div className="footer-links"><div><span>Store</span><a href="#catalog">All products</a><a href="#catalog">Game servers</a><a href="#catalog">Mods & tools</a></div><div><span>Company</span><a href="#faq">FAQ</a><a href="#contact">Contact</a></div><div><span>Legal</span><Link href="/terms">Terms & Conditions</Link><Link href="/refund-policy">No Refund Policy</Link></div><div><span>Contact</span><a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a><a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">WhatsApp: +94 77 123 4567</a><small>Response within one business day.</small></div></div><div className="footer-bottom"><span>© 2026 xoxod33p store. Built for better game nights.</span><span className="footer-code">SERVERS / MODS / SUPPORT</span></div></footer>
 
-      {isCartOpen && <div className="cart-overlay" role="presentation" onClick={() => setIsCartOpen(false)}><aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><p className="section-kicker">Your selection</p><h2>Shopping cart</h2></div><Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)} aria-label="Close shopping cart"><X size={20} /></Button></div>{cartProducts.length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>Your cart is empty.</p><span>Add a server, tool, or service to get started.</span></div> : <div className="drawer-items">{cartProducts.map(({ product, quantity }) => <div className="drawer-item" key={product.id}><div><strong>{product.name}</strong><span>{product.type === "server" ? "Game server" : product.type === "service" ? "Setup service" : "Mod or tool"}</span></div><div className="drawer-item-actions"><b>{formatPrice(product.price * quantity)}</b>{product.type === "server" && <div className="quantity-control" aria-label={`${product.name} quantity`}><Button variant="ghost" size="icon" onClick={() => updateCartQuantity(product.id, quantity - 1)} aria-label={`Decrease ${product.name} quantity`}>-</Button><span>{quantity}</span><Button variant="ghost" size="icon" onClick={() => updateCartQuantity(product.id, quantity + 1)} aria-label={`Increase ${product.name} quantity`}>+</Button></div>}<Button variant="ghost" size="icon" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}><Trash2 size={15} /></Button></div></div>)}</div>}<div className="drawer-footer"><div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><Button className="checkout-button" disabled={cartProducts.length === 0 || checkoutState === "loading"} onClick={startCheckout}>{checkoutState === "loading" ? "Submitting request..." : "Request server"}<ArrowRight size={16} /></Button><small>{checkoutState === "error" ? "Unable to submit your request. Please try again." : "An operator will review your request before payment."}</small></div></aside></div>}
+      {isCartOpen && <div className="cart-overlay" role="presentation" onClick={() => setIsCartOpen(false)}><aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><p className="section-kicker">Your selection</p><h2>Shopping cart</h2></div><Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)} aria-label="Close shopping cart"><X size={20} /></Button></div>{cartProducts.length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>Your cart is empty.</p><span>Add a server, tool, or service to get started.</span></div> : <div className="drawer-items">{cartProducts.map(({ product }) => <div className="drawer-item" key={product.id}><div><strong>{product.name}</strong><span>{product.type === "server" ? "Game server" : product.type === "service" ? "Setup service" : "Mod or tool"}</span></div><div className="drawer-item-actions"><b>{formatPrice(product.price)}</b><Button variant="ghost" size="icon" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}><Trash2 size={15} /></Button></div></div>)}</div>}<div className="drawer-footer"><div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><Button className="checkout-button" disabled={cartProducts.length === 0 || checkoutState === "loading"} onClick={startCheckout}>{checkoutState === "loading" ? "Opening payment..." : "Pay now"}<ArrowRight size={16} /></Button><small>{checkoutState === "error" ? checkoutError : "You will continue to secure payment."}</small></div></aside></div>}
     </main>
   );
 }

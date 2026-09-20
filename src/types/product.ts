@@ -11,6 +11,7 @@ export type Product = {
   accent: string;
   imageUrl?: string;
   active: boolean;
+  available?: boolean;
   downloadKey?: string;
   downloadName?: string;
   createdAt?: string;

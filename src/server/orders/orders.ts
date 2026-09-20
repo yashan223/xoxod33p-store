@@ -76,10 +76,14 @@ export async function createOrder(user: AuthUser, input: { orderId: string; item
   return order;
 }
 
-export async function markOrderPaid(orderId: string, paymentId: string) {
+export async function markOrderPaid(orderId: string, paymentId: string, amountCents: number) {
   const { orders, events } = await collections();
   const now = new Date();
-  const result = await orders.updateOne({ id: orderId, status: "accepted", paymentStatus: { $ne: "paid" } }, { $set: { paymentStatus: "paid", updatedAt: now } });
+  const order = await orders.findOne({ id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } });
+  if (!order) return false;
+  const expectedAmountCents = order.items.reduce((total, item) => total + item.unitPrice * item.quantity * 100, 0);
+  if (amountCents !== expectedAmountCents) return false;
+  const result = await orders.updateOne({ id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } }, { $set: { paymentStatus: "paid", updatedAt: now } });
   if (result.matchedCount === 0) return false;
   await events.insertOne({ orderId, type: "payment.succeeded", actorId: "payments.lk", details: paymentId, createdAt: now });
   return true;

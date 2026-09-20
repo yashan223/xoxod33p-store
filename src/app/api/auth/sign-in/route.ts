@@ -10,6 +10,6 @@ export async function POST(request: Request) {
   if (!user.emailVerified) return NextResponse.json({ error: "Verify your email before signing in.", code: "EMAIL_NOT_VERIFIED" }, { status: 403 });
 
   await createSession(user.id, body.rememberMe === true);
-  const redirectTo = body.redirectTo?.startsWith("/") ? body.redirectTo : isConfiguredAdminEmail(user.email) ? "/admin" : "/";
+  const redirectTo = body.redirectTo?.startsWith("/") ? body.redirectTo : isConfiguredAdminEmail(user.email) ? "/admin" : "/#catalog";
   return NextResponse.json({ redirectTo });
 }

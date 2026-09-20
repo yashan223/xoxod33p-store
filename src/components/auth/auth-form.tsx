@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -28,9 +28,12 @@ export function AuthForm({ mode }: AuthFormProps) {
     if (isSignUp) return;
     const verificationState = new URLSearchParams(window.location.search).get("verified");
     const resetState = new URLSearchParams(window.location.search).get("reset");
-    if (verificationState === "1") setNotice("Email verified. You can sign in now.");
-    if (verificationState === "0") setError("This verification link is invalid or has expired.");
-    if (resetState === "1") setNotice("Password updated. You can sign in now.");
+    const timeoutId = window.setTimeout(() => {
+      if (verificationState === "1") setNotice("Email verified. You can sign in now.");
+      if (verificationState === "0") setError("This verification link is invalid or has expired.");
+      if (resetState === "1") setNotice("Password updated. You can sign in now.");
+    });
+    return () => window.clearTimeout(timeoutId);
   }, [isSignUp]);
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
@@ -85,12 +88,12 @@ export function AuthForm({ mode }: AuthFormProps) {
         {!isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Remember me</label>}
         {!isSignUp && <Link className="auth-forgot-link" href="/forgot-password">Forgot password?</Link>}
         {error && <p className="auth-message auth-error">{error}</p>}
-        {notice && <p className="auth-message auth-success">{notice}</p>}
         {isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required /> I agree to the <Link href="/terms">Terms & Conditions</Link> and <Link href="/refund-policy">No Refund Policy</Link></label>}
         <Button type="submit" disabled={isLoading}>{isLoading ? "Please wait..." : isSignUp ? "Create account" : "Sign in"}</Button>
         {canResend && <button className="auth-resend" type="button" onClick={resendVerification}>Resend verification email</button>}
       </form>
       <p className="auth-switch">{isSignUp ? "Already have an account?" : "Need an account?"} <Link href={isSignUp ? "/sign-in" : "/sign-up"}>{isSignUp ? "Sign in" : "Create one"}</Link></p>
+      {notice && <div className="auth-notice-overlay" role="presentation" onClick={() => setNotice("")}><div className="auth-notice-popup" role="alertdialog" aria-modal="true" aria-labelledby="auth-notice-title" onClick={(event) => event.stopPropagation()}><button className="auth-notice-close" type="button" onClick={() => setNotice("")} aria-label="Close notification"><X size={18} /></button><span className="auth-notice-icon">@</span><h2 id="auth-notice-title">{notice.includes("email") ? "Check your email" : "Success"}</h2><p>{notice}</p><Button type="button" onClick={() => setNotice("")}>Continue</Button></div></div>}
     </div>
   );
 }

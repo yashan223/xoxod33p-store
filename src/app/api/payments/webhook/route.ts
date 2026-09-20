@@ -18,7 +18,7 @@ export async function POST(request: Request) {
     const event = getPaymentsLkClient().webhooks.constructEvent(rawBody, signature, webhookSecret);
 
     if (event.type === "payment.succeeded") {
-      if (event.data.reference) await markOrderPaid(event.data.reference, event.data.id);
+      if (event.data.reference) await markOrderPaid(event.data.reference, event.data.id, event.data.amountCents);
       console.info("Payments.lk payment succeeded", {
         paymentId: event.data.id,
         orderId: event.data.reference,
