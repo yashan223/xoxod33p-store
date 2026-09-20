@@ -86,6 +86,12 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
   }, [products]);
 
   useEffect(() => {
+    if (new URLSearchParams(window.location.search).get("cart") !== "1") return;
+    const timeoutId = window.setTimeout(() => setIsCartOpen(true));
+    return () => window.clearTimeout(timeoutId);
+  }, []);
+
+  useEffect(() => {
     if (isCartHydrated) window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
   }, [cart, isCartHydrated]);
 
