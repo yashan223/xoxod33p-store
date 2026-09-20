@@ -5,15 +5,18 @@ function valuesFromEnv(value: string | undefined) {
   return new Set((value ?? "").split(",").map((item) => item.trim()).filter(Boolean));
 }
 
+export function isConfiguredAdminEmail(email: string) {
+  const configuredEmails = valuesFromEnv(process.env.ADMIN_EMAILS);
+  const allowedEmails = configuredEmails.size > 0 ? configuredEmails : valuesFromEnv(process.env.ADMIN_DEFAULT_EMAIL);
+  return allowedEmails.has(email.trim().toLowerCase());
+}
+
 export async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in?redirect_url=/admin");
 
   const allowedUserIds = valuesFromEnv(process.env.ADMIN_USER_IDS);
-  const allowedEmails = valuesFromEnv(process.env.ADMIN_EMAILS).size > 0
-    ? valuesFromEnv(process.env.ADMIN_EMAILS)
-    : valuesFromEnv(process.env.ADMIN_DEFAULT_EMAIL);
-  const emailMatches = allowedEmails.has(user.email);
+  const emailMatches = isConfiguredAdminEmail(user.email);
 
   if (!allowedUserIds.has(user.id) && !emailMatches) redirect("/");
   return user;

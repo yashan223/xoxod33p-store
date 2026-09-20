@@ -9,6 +9,7 @@ export type Product = {
   meta: string;
   tag?: string;
   accent: string;
+  imageUrl?: string;
   active: boolean;
   downloadKey?: string;
   downloadName?: string;

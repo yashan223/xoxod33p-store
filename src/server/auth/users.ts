@@ -72,6 +72,34 @@ export async function updateUserProfile(id: string, input: { firstName?: string;
   return findUserById(id);
 }
 
+async function ensureDefaultAdmin(email: string, password: string) {
+  const configuredEmail = normalizeEmail(process.env.ADMIN_DEFAULT_EMAIL ?? "");
+  const configuredPassword = process.env.ADMIN_DEFAULT_PASSWORD;
+  if (!configuredEmail || !configuredPassword || email !== configuredEmail || password !== configuredPassword) return null;
+
+  const collection = await usersCollection();
+  const now = new Date();
+  const passwordHash = await hashPassword(password);
+  const existing = await collection.findOne({ email: configuredEmail });
+  if (existing) {
+    await collection.updateOne({ id: existing.id }, { $set: { passwordHash, emailVerified: true, updatedAt: now } });
+    return findUserById(existing.id);
+  }
+
+  const user: UserRecord = {
+    id: randomBytes(16).toString("hex"),
+    email: configuredEmail,
+    firstName: "Admin",
+    passwordHash,
+    emailVerified: true,
+    createdAt: now,
+    updatedAt: now,
+  };
+  await collection.createIndex({ email: 1 }, { unique: true });
+  await collection.insertOne(user);
+  return user;
+}
+
 export async function changeUserPassword(id: string, currentPassword: string, newPassword: string) {
   const collection = await usersCollection();
   const user = await collection.findOne({ id });
@@ -160,7 +188,8 @@ export async function verifyEmail(token: string) {
 }
 
 export async function authenticateUser(email: string, password: string) {
-  const user = await findUserByEmail(email);
+  const normalizedEmail = normalizeEmail(email);
+  const user = await ensureDefaultAdmin(normalizedEmail, password) ?? await findUserByEmail(normalizedEmail);
   if (!user || !(await verifyPassword(password, user.passwordHash))) return null;
   return user;
 }
