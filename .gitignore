@@ -19,9 +19,19 @@
 
 # production
 /build
+/.private-product-files/
+/.github/
+/design-system/
+/AGENTS.md
+/CLAUDE.md
+
+# local runtime data
+/data/
+*.log
 
 # misc
 .DS_Store
+Thumbs.db
 *.pem
 
 # debug
