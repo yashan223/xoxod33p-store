@@ -79,8 +79,10 @@ export async function createOrder(user: AuthUser, input: { orderId: string; item
 export async function markOrderPaid(orderId: string, paymentId: string) {
   const { orders, events } = await collections();
   const now = new Date();
-  await orders.updateOne({ id: orderId }, { $set: { paymentStatus: "paid", updatedAt: now } });
+  const result = await orders.updateOne({ id: orderId, status: "accepted", paymentStatus: { $ne: "paid" } }, { $set: { paymentStatus: "paid", updatedAt: now } });
+  if (result.matchedCount === 0) return false;
   await events.insertOne({ orderId, type: "payment.succeeded", actorId: "payments.lk", details: paymentId, createdAt: now });
+  return true;
 }
 
 export async function getOrderForUser(orderId: string, userId: string) {
@@ -89,6 +91,18 @@ export async function getOrderForUser(orderId: string, userId: string) {
   if (!order) return null;
   const orderMessages = await messages.find({ orderId }).sort({ createdAt: 1 }).toArray();
   return { ...order, messages: orderMessages };
+}
+
+export async function listOrdersForUser(userId: string) {
+  const { orders, messages } = await collections();
+  const userOrders = await orders.find({ userId }).sort({ updatedAt: -1 }).toArray();
+  return Promise.all(userOrders.map(async ({ _id, ...order }) => {
+    const [latestMessage] = await messages.find({ orderId: order.id }).sort({ createdAt: -1 }).limit(1).toArray();
+    return {
+      ...order,
+      latestMessage: latestMessage ? { body: latestMessage.body, createdAt: latestMessage.createdAt } : null,
+    };
+  }));
 }
 
 export async function getOrderForAdmin(orderId: string) {
@@ -101,7 +115,7 @@ export async function getOrderForAdmin(orderId: string) {
 
 export async function canDownloadProduct(orderId: string, userId: string, productId: string) {
   const { orders } = await collections();
-  const order = await orders.findOne({ id: orderId, userId, paymentStatus: "paid", "items.productId": productId });
+  const order = await orders.findOne({ id: orderId, userId, paymentStatus: "paid", items: { $elemMatch: { productId, type: "mod" } } });
   return Boolean(order);
 }
 

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Order = {
@@ -34,6 +35,8 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
   const [message, setMessage] = useState("");
   const [status, setStatus] = useState(order.status);
   const [isSending, setIsSending] = useState(false);
+  const [isPaying, setIsPaying] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
 
   useEffect(() => {
     const endpoint = admin ? `/api/admin/orders/${order.id}` : `/api/orders/${order.id}/messages`;
@@ -76,9 +79,22 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
     }
   }
 
+  async function startPayment() {
+    setIsPaying(true);
+    setPaymentError("");
+    const response = await fetch("/api/payments/checkout", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ orderId: order.id }) });
+    const result = await response.json() as { url?: string; error?: string };
+    if (response.ok && result.url) window.location.assign(result.url);
+    else {
+      setPaymentError(result.error ?? "Unable to open payment.");
+      setIsPaying(false);
+    }
+  }
+
   return (
     <section className="order-chat"><div className="order-chat-header"><div><span className="admin-kicker">Order {order.id}</span><h1>{admin ? order.email : "Your order request"}</h1></div><span className="order-status">{status.replace("_", " ")}</span></div>
       <div className="order-items">{order.items.map((item) => <div key={item.productId}><strong>{item.name}</strong><span>{item.quantity} x Rs. {item.unitPrice.toLocaleString("en-LK")}{admin && <ProductFileUpload productId={item.productId} />}</span></div>)}</div>
+      {!admin && status === "accepted" && order.paymentStatus === "pending" && <div className="order-payment-callout"><div><strong>Your request was accepted.</strong><span>Complete payment to start delivery.</span></div><Button onClick={startPayment} disabled={isPaying}>{isPaying ? "Opening payment..." : "Pay for request"}<ArrowRight size={15} /></Button>{paymentError && <small>{paymentError}</small>}</div>}
       {!admin && order.paymentStatus === "paid" && <Link className="order-download-center" href={`/orders/${order.id}/downloads`}>Open download center</Link>}
       {admin && <div className="order-status-actions">{["requested", "accepted", "in_progress", "completed", "cancelled"].map((option) => <Button key={option} variant={status === option ? "default" : "outline"} size="sm" onClick={() => changeStatus(option)}>{option.replace("_", " ")}</Button>)}</div>}
       <div className="order-messages">{order.messages.length === 0 ? <p className="order-empty">No messages yet. Send the first update below.</p> : order.messages.map((item) => <div className={`order-message ${item.senderRole === (admin ? "admin" : "customer") ? "mine" : ""}`} key={item.id}><span>{item.senderRole === "admin" ? "Admin" : "Customer"}</span><p>{item.body}</p></div>)}</div>

@@ -64,6 +64,22 @@ export async function findUserById(id: string) {
   return collection.findOne({ id });
 }
 
+export async function updateUserProfile(id: string, input: { firstName?: string; country?: string }) {
+  const collection = await usersCollection();
+  const firstName = input.firstName?.trim().slice(0, 80) || undefined;
+  const country = input.country?.trim().slice(0, 80) || undefined;
+  await collection.updateOne({ id }, { $set: { firstName, country, updatedAt: new Date() } });
+  return findUserById(id);
+}
+
+export async function changeUserPassword(id: string, currentPassword: string, newPassword: string) {
+  const collection = await usersCollection();
+  const user = await collection.findOne({ id });
+  if (!user || !(await verifyPassword(currentPassword, user.passwordHash))) return false;
+  await collection.updateOne({ id }, { $set: { passwordHash: await hashPassword(newPassword), updatedAt: new Date() } });
+  return true;
+}
+
 export async function listAdminUsers(): Promise<AdminUser[]> {
   const collection = await usersCollection();
   const users = await collection

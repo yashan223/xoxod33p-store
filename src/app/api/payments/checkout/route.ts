@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getPaymentLineItems } from "@/server/payments/catalog";
 import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/payments-lk";
 import { getCurrentUser } from "@/server/auth/session";
-import { createOrder } from "@/server/orders/orders";
+import { getOrderForUser } from "@/server/orders/orders";
 
 export const runtime = "nodejs";
 
@@ -13,7 +13,6 @@ type CheckoutItem = {
 
 type CheckoutRequest = {
   orderId?: string;
-  items?: CheckoutItem[];
 };
 
 export async function POST(request: Request) {
@@ -26,34 +25,20 @@ export async function POST(request: Request) {
   }
 
   const orderId = body.orderId?.trim();
-  const items = body.items;
 
   if (!orderId || !/^[a-zA-Z0-9_-]{3,80}$/.test(orderId)) {
     return NextResponse.json({ error: "A valid orderId is required." }, { status: 400 });
   }
 
-  if (!Array.isArray(items) || items.length === 0 || items.length > 10) {
-    return NextResponse.json({ error: "Provide between 1 and 10 checkout items." }, { status: 400 });
-  }
-
-  const validatedItems: { productId: string; quantity: number }[] = [];
-
-  for (const item of items) {
-    const quantity = item.quantity ?? 1;
-
-    if (typeof item.productId !== "string" || !Number.isInteger(quantity) || quantity < 1 || quantity > 99) {
-      return NextResponse.json({ error: "One or more checkout items are invalid." }, { status: 400 });
-    }
-
-    validatedItems.push({ productId: item.productId, quantity });
-  }
-
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in before placing an order." }, { status: 401 });
+  const order = await getOrderForUser(orderId, user.id);
+  if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
+  if (order.status !== "accepted") return NextResponse.json({ error: "This order must be accepted before payment." }, { status: 409 });
+  if (order.paymentStatus === "paid") return NextResponse.json({ error: "This order has already been paid." }, { status: 409 });
 
   try {
-    await createOrder(user, { orderId, items: validatedItems });
-    const lineItems = await getPaymentLineItems(validatedItems);
+    const lineItems = await getPaymentLineItems(order.items.map(({ productId, quantity }) => ({ productId, quantity })));
     const checkout = await getPaymentsLkClient().checkouts.create(
       {
         lineItems,
