@@ -56,6 +56,18 @@
 .admin-shell { height: 100dvh; overflow: hidden; }.admin-content { height: 100dvh; overflow-y: auto; }
 @media (max-width: 520px) { .admin-shell { height: auto; overflow: visible; }.admin-content { height: auto; overflow: visible; } }
 .admin-empty { color: var(--muted-foreground); font-size: 13px; padding: 35px 24px; }
+.admin-threads { display: flex; flex-direction: column; }
+.admin-thread { align-items: center; border-bottom: 1px solid var(--border); display: flex; gap: 20px; justify-content: space-between; padding: 18px 24px; }
+.admin-thread:last-child { border-bottom: 0; }
+.admin-thread.unread { background: #f4f8ff; }
+.admin-thread-main { min-width: 0; }
+.admin-thread-main strong { display: block; font-size: 13px; margin: 5px 0; overflow-wrap: anywhere; }
+.admin-thread-main p { color: var(--muted-foreground); font-size: 11px; line-height: 1.5; margin: 0; max-width: 520px; overflow-wrap: anywhere; }
+.admin-thread-main p.admin-thread-muted { font-style: italic; }
+.admin-thread-side { align-items: end; display: flex; flex-direction: column; flex-shrink: 0; gap: 6px; }
+.admin-thread-side small { color: var(--muted-foreground); font-size: 10px; }
+.admin-thread-badge { align-items: center; background: #b42318; border-radius: 999px; color: #fff; display: inline-flex; font-family: var(--font-dm-mono), monospace; font-size: 9px; font-weight: 700; height: 17px; justify-content: center; min-width: 17px; padding: 0 5px; }
+@media (max-width: 800px) { .admin-thread { align-items: flex-start; flex-direction: column; gap: 12px; } }
 @media (max-width: 800px) { .admin-sidebar { padding: 18px; position: static; width: 190px; }.admin-content { margin-left: 0; width: calc(100% - 190px); }.admin-topbar { padding: 0 24px; }.admin-page { padding: 35px 24px 50px; }.admin-stat-grid { grid-template-columns: repeat(2, 1fr); } }
 @media (max-width: 520px) { .admin-shell { display: block; }.admin-sidebar { border-bottom: 1px solid var(--border); border-right: 0; height: auto; padding: 18px 20px; width: 100%; }.admin-nav { flex-direction: row; margin-top: 20px; overflow-x: auto; }.admin-nav a { white-space: nowrap; }.admin-store-link { display: none; }.admin-content { width: 100%; }.admin-topbar { padding: 18px 20px; }.admin-page { padding: 30px 20px; }.admin-page-heading { align-items: start; display: block; }.admin-date { display: block; margin-top: 20px; }.admin-stat-grid { gap: 10px; }.admin-stat { padding: 15px; }.admin-stat strong { font-size: 24px; }.admin-panel-header { align-items: start; display: block; }.admin-panel-meta { display: block; margin-top: 12px; } }
 @import "tailwindcss";
@@ -442,3 +454,41 @@ body { background: linear-gradient(135deg, #f7f7f7, #ffffff 48%, #eeeeee); }
   .dashboard-nav a:hover { background: #292929; color: #fff; }
   .dashboard-nav a.active { background: #303030; border: 1px solid #4a4a4a; color: #fff; }
   .order-delivery-note { background: #f5f5f5; border: 1px solid var(--border); border-radius: var(--radius); color: var(--muted-foreground); font-size: 12px; line-height: 1.5; margin: 20px 0; padding: 12px 14px; }
+
+  .side-notif-root { align-items: flex-end; bottom: 22px; display: flex; flex-direction: column; gap: 12px; pointer-events: none; position: fixed; right: 22px; z-index: 60; }
+  .side-notif-toasts { display: flex; flex-direction: column; gap: 10px; }
+  .side-notif-toast { pointer-events: auto; animation: side-notif-in .28s ease both; background: #171717; border: 1px solid #2e2e2e; border-radius: 12px; box-shadow: 0 18px 44px rgba(0,0,0,.28); color: #fff; display: flex; gap: 12px; max-width: 320px; min-width: 280px; padding: 14px; }
+  .side-notif-toast-icon { align-items: center; background: #2e2e2e; border-radius: 50%; display: inline-flex; flex-shrink: 0; height: 30px; justify-content: center; width: 30px; }
+  .side-notif-toast-body { min-width: 0; }
+  .side-notif-kicker { color: #a3a3a3; display: block; font-family: var(--font-dm-mono), monospace; font-size: 9px; letter-spacing: .04em; text-transform: uppercase; }
+  .side-notif-toast-body p { font-size: 12px; line-height: 1.5; margin: 5px 0 4px; overflow-wrap: anywhere; }
+  .side-notif-toast-body small { color: #a3a3a3; font-size: 10px; }
+  .side-notif-toast-actions { align-items: start; display: flex; flex-direction: column; flex-shrink: 0; gap: 6px; }
+  .side-notif-toast-actions a { color: #fff; font-size: 11px; font-weight: 700; text-decoration: underline; }
+  .side-notif-toast-actions button { background: transparent; border: 0; color: #a3a3a3; cursor: pointer; display: inline-flex; padding: 2px; }
+  .side-notif-toast-actions button:hover { color: #fff; }
+  .side-notif-bell { align-items: center; backdrop-filter: blur(8px); background: rgba(255,255,255,.85); border: 1px solid var(--border); border-radius: 50%; box-shadow: 0 10px 30px rgba(0,0,0,.12); color: var(--foreground); cursor: pointer; display: inline-flex; height: 42px; justify-content: center; pointer-events: auto; position: relative; transition: background .2s, color .2s; width: 42px; }
+  .side-notif-bell:hover { background: #171717; color: #fff; }
+  .side-notif-bell.has-unread { background: #171717; color: #fff; }
+  .side-notif-badge { align-items: center; background: #b42318; border: 2px solid #f6f6f6; border-radius: 999px; color: #fff; display: inline-flex; font-family: var(--font-dm-mono), monospace; font-size: 9px; font-weight: 700; height: 18px; justify-content: center; min-width: 18px; padding: 0 4px; position: absolute; right: -4px; top: -4px; }
+  @keyframes side-notif-in { from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @media (prefers-reduced-motion: reduce) { .side-notif-toast { animation: none; } }
+  .side-notif-layer { inset: 0; position: fixed; z-index: 70; }
+  .side-notif-backdrop { background: rgba(23,23,23,.28); border: 0; cursor: pointer; display: block; height: 100%; left: 0; padding: 0; position: absolute; top: 0; width: 100%; }
+  .side-notif-drawer { background: #fff; border-left: 1px solid var(--border); box-shadow: -24px 0 60px rgba(0,0,0,.12); display: flex; flex-direction: column; height: 100dvh; left: auto; position: absolute; right: 0; top: 0; width: min(360px, 92vw); }
+  .side-notif-drawer-header { align-items: center; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; padding: 20px 22px; }
+  .side-notif-drawer-header h2 { font-size: 20px; letter-spacing: -.04em; margin: 6px 0 0; }
+  .side-notif-drawer-header button { align-items: center; background: transparent; border: 0; color: var(--muted-foreground); cursor: pointer; display: inline-flex; padding: 6px; }
+  .side-notif-drawer-header button:hover { color: var(--foreground); }
+  .side-notif-list { flex: 1; overflow-y: auto; }
+  .side-notif-item { border-bottom: 1px solid var(--border); display: block; padding: 16px 22px; position: relative; transition: background .15s; }
+  .side-notif-item:hover { background: #fafafa; }
+  .side-notif-item p { color: var(--foreground); font-size: 12px; line-height: 1.55; margin: 5px 0 4px; overflow-wrap: anywhere; }
+  .side-notif-item small { color: var(--muted-foreground); font-size: 10px; }
+  .side-notif-item.unread { background: #f4f8ff; }
+  .side-notif-item.unread::before { background: #171717; border-radius: 50%; content: ""; height: 7px; left: 9px; position: absolute; top: 22px; width: 7px; }
+  .side-notif-empty { align-items: center; color: var(--muted-foreground); display: flex; flex-direction: column; font-size: 12px; gap: 10px; line-height: 1.6; padding: 48px 24px; text-align: center; }
+  .side-notif-drawer-footer { border-top: 1px solid var(--border); padding: 14px 22px; }
+  .side-notif-drawer-footer button { align-items: center; background: transparent; border: 0; color: var(--foreground); cursor: pointer; display: inline-flex; font-size: 11px; font-weight: 700; gap: 6px; padding: 0; text-decoration: underline; }
+  .side-notif-drawer-footer button:disabled { color: var(--muted-foreground); cursor: default; text-decoration: none; }
+  @media (max-width: 620px) { .side-notif-root { bottom: 16px; right: 16px; } .side-notif-toast { max-width: min(320px, calc(100vw - 32px)); min-width: 0; } .side-notif-drawer { width: 100vw; } }

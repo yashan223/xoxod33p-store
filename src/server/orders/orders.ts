@@ -41,6 +41,16 @@ type OrderMessage = {
   createdAt: Date;
 };
 
+type NotificationRecord = {
+  key: string;
+  userId: string;
+  readAt: Date;
+};
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 let indexesPromise: Promise<void> | undefined;
 
 function ensureIndexes() {
@@ -51,6 +61,8 @@ function ensureIndexes() {
       database.collection<OrderRecord>("orders").createIndex({ userId: 1, createdAt: -1 }),
       database.collection<OrderEvent>("order_events").createIndex({ orderId: 1, createdAt: 1 }),
       database.collection<OrderMessage>("order_messages").createIndex({ orderId: 1, createdAt: 1 }),
+      database.collection<OrderMessage>("order_messages").createIndex({ senderRole: 1, createdAt: -1 }),
+      database.collection<NotificationRecord>("notification_reads").createIndex({ key: 1 }, { unique: true }),
     ]);
   })().catch((error) => {
     indexesPromise = undefined;
@@ -66,6 +78,7 @@ async function collections() {
     orders: database.collection<OrderRecord>("orders"),
     events: database.collection<OrderEvent>("order_events"),
     messages: database.collection<OrderMessage>("order_messages"),
+    reads: database.collection<NotificationRecord>("notification_reads"),
   };
 }
 
@@ -150,6 +163,90 @@ export async function updateOrderStatus(orderId: string, status: OrderStatus, ac
   if (result.matchedCount === 0) return false;
   await events.insertOne({ orderId, type: `order.${status}`, actorId, createdAt: now });
   return true;
+}
+
+export async function listMessageNotifications(input: { userId: string; isAdmin: boolean }) {
+  const { orders, messages, reads } = await collections();
+  const orderIds = input.isAdmin
+    ? (await orders.find({}, { projection: { id: 1 } }).toArray()).map((order) => order.id)
+    : (await orders.find({ userId: input.userId }, { projection: { id: 1 } }).toArray()).map((order) => order.id);
+  if (orderIds.length === 0) return [];
+
+  const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
+  const [relevantMessages, readKeys] = await Promise.all([
+    messages
+      .find({ orderId: { $in: orderIds }, senderRole: input.isAdmin ? "customer" : "admin", createdAt: { $gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
+      .sort({ createdAt: -1 })
+      .limit(200)
+      .toArray(),
+    reads
+      .find({ key: new RegExp(`^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`) })
+      .toArray()
+      .catch(() => [] as NotificationRecord[]),
+  ]);
+
+  const latestByOrder = new Map<string, OrderMessage>();
+  for (const message of relevantMessages) {
+    if (!latestByOrder.has(message.orderId)) latestByOrder.set(message.orderId, message);
+  }
+  return [...latestByOrder.values()].slice(0, 30).map((message) => ({
+    id: message.id,
+    orderId: message.orderId,
+    body: message.body,
+    createdAt: message.createdAt.toISOString(),
+    read: readKeys.some((record) => record.key === `${keyPrefix}${message.orderId}:${message.id}`),
+  }));
+}
+
+export async function markMessageNotificationsRead(input: { userId: string; isAdmin: boolean; keys: string[] }) {
+  if (input.keys.length === 0) return;
+  const { reads } = await collections();
+  const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
+  const readAt = new Date();
+  await Promise.all(
+    input.keys
+      .filter((key) => /^[\w-]+:[a-f0-9]{32}$/.test(key))
+      .map((key) =>
+        reads.updateOne({ key: `${keyPrefix}${key}` }, { $setOnInsert: { key: `${keyPrefix}${key}`, userId: input.userId, readAt } }, { upsert: true }),
+      ),
+  );
+}
+
+export async function listAdminMessageThreads() {
+  const { orders, messages, reads } = await collections();
+  const adminOrders = await orders.find({}, { projection: { id: 1, email: 1, status: 1, paymentStatus: 1, updatedAt: 1 } }).sort({ updatedAt: -1 }).limit(200).toArray();
+  if (adminOrders.length === 0) return [];
+
+  const orderIds = adminOrders.map((order) => order.id);
+  const keyPrefix = "a:";
+  const [relevantMessages, readKeys] = await Promise.all([
+    messages
+      .find({ orderId: { $in: orderIds }, senderRole: "customer" })
+      .sort({ createdAt: -1 })
+      .limit(500)
+      .toArray(),
+    reads
+      .find({ key: new RegExp(`^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`) })
+      .toArray()
+      .catch(() => [] as NotificationRecord[]),
+  ]);
+
+  const readKeySet = new Set(readKeys.map((record) => record.key));
+  const threads = adminOrders.map((order) => {
+    const orderMessages = relevantMessages.filter((message) => message.orderId === order.id).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const latest = orderMessages[0];
+    const unreadCount = orderMessages.filter((message) => !readKeySet.has(`${keyPrefix}${order.id}:${message.id}`)).length;
+    return {
+      orderId: order.id,
+      email: order.email,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      updatedAt: order.updatedAt.toISOString(),
+      latestMessage: latest ? { id: latest.id, body: latest.body, senderRole: latest.senderRole, createdAt: latest.createdAt.toISOString() } : null,
+      unreadCount,
+    };
+  });
+  return threads;
 }
 
 export async function addOrderMessage(orderId: string, senderId: string, senderRole: "customer" | "admin", body: string) {

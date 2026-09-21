@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { siteDescription, siteKeywords, siteName, siteTagline, siteUrl } from "@/lib/seo";
 import { getCurrentSession } from "@/server/auth/session";
 import { InactivityLogout } from "@/components/auth/inactivity-logout";
+import { MessageNotifications } from "@/components/notifications/message-notifications";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
@@ -115,6 +116,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
         />
         <InactivityLogout enabled={Boolean(currentSession && !currentSession.rememberMe)} />
+        <MessageNotifications enabled={Boolean(currentSession)} />
         {children}
       </body>
     </html>

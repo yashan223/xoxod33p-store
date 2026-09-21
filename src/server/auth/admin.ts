@@ -11,6 +11,13 @@ export function isConfiguredAdminEmail(email: string) {
   return allowedEmails.has(email.trim().toLowerCase());
 }
 
+export async function isAdminUser() {
+  const user = await getCurrentUser();
+  if (!user) return false;
+  const allowedUserIds = valuesFromEnv(process.env.ADMIN_USER_IDS);
+  return allowedUserIds.has(user.id) || isConfiguredAdminEmail(user.email);
+}
+
 export async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in?redirect_url=/admin");
