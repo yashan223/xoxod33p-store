@@ -19,12 +19,24 @@ function hashToken(token: string) {
   return createHash("sha256").update(token).digest("hex");
 }
 
+let indexesPromise: Promise<void> | undefined;
+
+function ensureIndexes() {
+  indexesPromise ??= (async () => {
+    const collection = (await getDatabase()).collection<SessionRecord>("sessions");
+    await collection.createIndex({ tokenHash: 1 }, { unique: true });
+    await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
+  })().catch((error) => {
+    indexesPromise = undefined;
+    throw error;
+  });
+  return indexesPromise;
+}
+
 async function sessionsCollection() {
   const database = await getDatabase();
-  const collection = database.collection<SessionRecord>("sessions");
-  await collection.createIndex({ tokenHash: 1 }, { unique: true });
-  await collection.createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 });
-  return collection;
+  await ensureIndexes();
+  return database.collection<SessionRecord>("sessions");
 }
 
 export async function createSession(userId: string, rememberMe = false) {

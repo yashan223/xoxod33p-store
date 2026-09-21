@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -34,9 +34,15 @@ function formatPrice(price: number) {
   return `Rs. ${price.toLocaleString("en-LK")}`;
 }
 
+function createOrderReference() {
+  const unique = typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  return `loadout-${unique}`;
+}
+
 export function Storefront({ products, currentUser }: { products: Product[]; currentUser: { email: string; firstName?: string } | null }) {
   const router = useRouter();
-  const checkoutReference = useId().replace(/[^a-zA-Z0-9_-]/g, "");
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
@@ -56,14 +62,28 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
   }, []);
 
   useEffect(() => {
-    const sections = ["home", "catalog", "faq", "contact"].map((id) => document.getElementById(id)).filter((section): section is HTMLElement => Boolean(section));
-    const observer = new IntersectionObserver((entries) => {
-      const visibleSection = entries.filter((entry) => entry.isIntersecting).sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
-      if (visibleSection) setActiveSection(visibleSection.target.id);
-    }, { rootMargin: "-25% 0px -55%", threshold: [0.1, 0.5, 1] });
+    const sectionIds = ["home", "catalog", "faq", "contact"];
+    const sections = sectionIds
+      .map((id) => document.getElementById(id))
+      .filter((section): section is HTMLElement => Boolean(section));
 
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+    const updateActiveSection = () => {
+      const currentPosition = window.scrollY + 96;
+      const currentSection = sections.reduce((activeSection, section) => {
+        const sectionTop = section.getBoundingClientRect().top + window.scrollY;
+        return sectionTop <= currentPosition ? section : activeSection;
+      }, sections[0]);
+
+      if (currentSection) setActiveSection(currentSection.id);
+    };
+
+    updateActiveSection();
+    window.addEventListener("scroll", updateActiveSection, { passive: true });
+    window.addEventListener("resize", updateActiveSection);
+    return () => {
+      window.removeEventListener("scroll", updateActiveSection);
+      window.removeEventListener("resize", updateActiveSection);
+    };
   }, []);
 
   useEffect(() => {
@@ -132,7 +152,7 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: `loadout-${checkoutReference}`, items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })) }),
+        body: JSON.stringify({ orderId: createOrderReference(), items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })) }),
       });
       if (response.status === 401) {
         router.push(`/sign-in?redirect_url=${encodeURIComponent("/#catalog")}`);

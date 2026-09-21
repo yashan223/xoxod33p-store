@@ -3,7 +3,7 @@ import { basename, join, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 
 function getFilesRoot() {
-  return resolve(process.env.PRODUCT_FILES_ROOT ?? join(process.cwd(), ".private-product-files"));
+  return resolve(/* turbopackIgnore: true */ process.env.PRODUCT_FILES_ROOT || join(process.cwd(), ".private-product-files"));
 }
 
 function safeFileName(fileName: string) {
@@ -18,7 +18,7 @@ function assertInsideRoot(filePath: string) {
   const root = getFilesRoot();
   const resolvedPath = resolve(filePath);
   const pathFromRoot = relative(root, resolvedPath);
-  if (pathFromRoot === ".." || pathFromRoot.startsWith(`..${sep}`) || resolve(root) === resolvedPath) throw new Error("Invalid private file path.");
+  if (pathFromRoot === ".." || pathFromRoot.startsWith(`..${sep}`) || resolve(/* turbopackIgnore: true */ root) === resolvedPath) throw new Error("Invalid private file path.");
 }
 
 export async function uploadProductFile(productId: string, file: File) {
@@ -36,5 +36,5 @@ export async function readProductFile(key: string) {
   const root = getFilesRoot();
   const filePath = resolve(root, key);
   assertInsideRoot(filePath);
-  return readFile(filePath);
+  return readFile(/* turbopackIgnore: true */ filePath);
 }

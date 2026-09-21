@@ -24,8 +24,23 @@ export type AuthUser = Pick<UserRecord, "id" | "email" | "firstName" | "emailVer
 
 export type AdminUser = Pick<UserRecord, "id" | "email" | "firstName" | "country" | "emailVerified" | "createdAt" | "updatedAt">;
 
-function usersCollection() {
-  return getDatabase().then((database) => database.collection<UserRecord>("users"));
+let indexesPromise: Promise<void> | undefined;
+
+function ensureIndexes() {
+  indexesPromise ??= (async () => {
+    const collection = (await getDatabase()).collection<UserRecord>("users");
+    await collection.createIndex({ email: 1 }, { unique: true });
+  })().catch((error) => {
+    indexesPromise = undefined;
+    throw error;
+  });
+  return indexesPromise;
+}
+
+async function usersCollection() {
+  const database = await getDatabase();
+  await ensureIndexes();
+  return database.collection<UserRecord>("users");
 }
 
 function normalizeEmail(email: string) {
@@ -95,7 +110,6 @@ async function ensureDefaultAdmin(email: string, password: string) {
     createdAt: now,
     updatedAt: now,
   };
-  await collection.createIndex({ email: 1 }, { unique: true });
   await collection.insertOne(user);
   return user;
 }
@@ -134,7 +148,6 @@ export async function deleteUser(id: string) {
 
 export async function createUser(input: { email: string; password: string; firstName?: string; country?: string }) {
   const collection = await usersCollection();
-  await collection.createIndex({ email: 1 }, { unique: true });
 
   const now = new Date();
   const verificationToken = createVerificationToken();

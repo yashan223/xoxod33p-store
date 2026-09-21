@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { changeUserPassword } from "@/server/auth/users";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 export async function PATCH(request: Request) {
+  const limited = enforceRateLimit(request, "profile-password", { limit: 10, windowMs: 15 * 60_000 });
+  if (limited) return limited;
+
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in required." }, { status: 401 });
 

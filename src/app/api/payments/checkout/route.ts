@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
-import { getPaymentLineItems } from "@/server/payments/catalog";
 import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/payments-lk";
 import { getCurrentUser } from "@/server/auth/session";
 import { getOrderForUser } from "@/server/orders/orders";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -11,6 +11,9 @@ type CheckoutRequest = {
 };
 
 export async function POST(request: Request) {
+  const limited = enforceRateLimit(request, "payments-checkout", { limit: 20, windowMs: 5 * 60_000 });
+  if (limited) return limited;
+
   let body: CheckoutRequest;
 
   try {
@@ -33,13 +36,17 @@ export async function POST(request: Request) {
   if (order.paymentStatus === "paid") return NextResponse.json({ error: "This order has already been paid." }, { status: 409 });
 
   try {
-    const lineItems = await getPaymentLineItems(order.items.map(({ productId, quantity }) => ({ productId, quantity })));
+    const lineItems = order.items.map(({ name, quantity, unitPrice }) => ({
+      name: name.slice(0, 80),
+      unitAmountCents: unitPrice * 100,
+      quantity,
+    }));
     const checkout = await getPaymentsLkClient().checkouts.create(
       {
         lineItems,
         reference: orderId,
         successUrl: getPaymentsReturnUrl(`${process.env.PAYMENTS_LK_SUCCESS_PATH ?? "/checkout/success"}?order=${orderId}`),
-        cancelUrl: getPaymentsReturnUrl(process.env.PAYMENTS_LK_CANCEL_PATH ?? "/cart"),
+        cancelUrl: getPaymentsReturnUrl(process.env.PAYMENTS_LK_CANCEL_PATH ?? "/"),
       },
       { idempotencyKey: `order-${orderId}` },
     );

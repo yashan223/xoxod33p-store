@@ -23,6 +23,7 @@ export function ProductAddToCart({ product }: { product: Product }) {
     }
     if (!cart.some((item) => item.productId === product.id)) {
       window.localStorage.setItem(cartStorageKey, JSON.stringify([...cart, { productId: product.id, quantity: 1 }]));
+      window.dispatchEvent(new Event("xoxod33p-cart-updated"));
     }
     setAdded(true);
   }

@@ -6,7 +6,7 @@ services:
     env_file:
       - .env.local
     environment:
-      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-dropzone_admin}
+      MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-xoxod33p_admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-change-me-local}
       MONGO_INITDB_DATABASE: ${MONGODB_DB:-xoxod33p-store}
     ports:

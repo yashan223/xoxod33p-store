@@ -2,8 +2,12 @@ import { NextResponse } from "next/server";
 import { isConfiguredAdminEmail } from "@/server/auth/admin";
 import { authenticateUser } from "@/server/auth/users";
 import { createSession } from "@/server/auth/session";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = enforceRateLimit(request, "sign-in", { limit: 10, windowMs: 5 * 60_000 });
+  if (limited) return limited;
+
   const body = await request.json() as { email?: string; password?: string; redirectTo?: string; rememberMe?: boolean };
   const user = await authenticateUser(body.email ?? "", body.password ?? "");
   if (!user) return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });

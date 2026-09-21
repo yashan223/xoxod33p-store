@@ -1,4 +1,6 @@
-export type ProductType = "server" | "mod" | "service";
+export const productTypes = ["server", "mod", "service"] as const;
+
+export type ProductType = (typeof productTypes)[number];
 
 export type Product = {
   id: string;

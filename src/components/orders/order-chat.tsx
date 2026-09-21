@@ -61,7 +61,7 @@ export function OrderChat({ order: initialOrder, admin = false }: OrderChatProps
     const response = await fetch(endpoint, {
       method: admin ? "PATCH" : "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(admin ? { message } : { message }),
+      body: JSON.stringify({ message }),
     });
     if (response.ok) {
       const result = await response.json() as { message?: Order["messages"][number] };

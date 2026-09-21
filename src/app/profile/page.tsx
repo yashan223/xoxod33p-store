@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { ArrowUpRight, LayoutDashboard, MessageCircle, ShoppingBag, UserRound } from "lucide-react";
 import { PasswordForm } from "@/components/account/password-form";
@@ -6,6 +7,11 @@ import { requireUser } from "@/server/auth/session";
 import { findUserById } from "@/server/auth/users";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "Profile",
+  robots: { index: false, follow: false, nocache: true },
+};
 
 export default async function ProfilePage() {
   const user = await requireUser("/profile");

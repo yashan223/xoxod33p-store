@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
 import { getDatabase } from "@/server/db/mongodb";
-import type { Product, ProductType } from "@/types/product";
+import { productTypes, type Product, type ProductType } from "@/types/product";
 
 type ProductRecord = Omit<Product, "createdAt" | "updatedAt"> & { createdAt: Date; updatedAt: Date };
-
-const productTypes: ProductType[] = ["server", "mod", "service"];
 
 function productInput(body: Record<string, unknown>) {
   const type = body.type;

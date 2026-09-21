@@ -27,7 +27,7 @@ export default async function CheckoutSuccessPage({ searchParams }: PageProps) {
     }
   }
 
-  const title = paymentConfirmed ? "Payment confirmed." : status === "failed" || status === "canceled" ? "Payment was not completed." : "Payment is being confirmed.";
+  const title = paymentConfirmed ? "Payment confirmed." : status === "failed" || status === "canceled" || status === "expired" ? "Payment was not completed." : "Payment is being confirmed.";
   const message = paymentConfirmed ? "Your order is paid. An operator will continue delivery through your order chat." : "We are waiting for payment confirmation. Your order status will update when Payments.lk confirms the transaction.";
   return <main className="checkout-result"><StorePageHeader backHref={order ? `/orders/${encodeURIComponent(order)}` : "/"} backLabel={order ? "Open order chat" : "Back to store"} /><div className="checkout-result-content"><span className="section-kicker">{paymentConfirmed ? "Payment received" : "Payment status"}</span><h1>{title}</h1><p>{message}</p></div></main>;
 }

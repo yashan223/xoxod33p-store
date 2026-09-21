@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { findUserByEmail, updateVerificationToken } from "@/server/auth/users";
 import { sendVerificationEmail } from "@/server/auth/mail";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 export async function POST(request: Request) {
+  const limited = enforceRateLimit(request, "resend-verification", { limit: 5, windowMs: 15 * 60_000 });
+  if (limited) return limited;
+
   const body = await request.json() as { email?: string };
   const email = body.email?.trim().toLowerCase();
   const user = email ? await findUserByEmail(email) : null;

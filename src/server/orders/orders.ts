@@ -41,18 +41,32 @@ type OrderMessage = {
   createdAt: Date;
 };
 
+let indexesPromise: Promise<void> | undefined;
+
+function ensureIndexes() {
+  indexesPromise ??= (async () => {
+    const database = await getDatabase();
+    await Promise.all([
+      database.collection<OrderRecord>("orders").createIndex({ id: 1 }, { unique: true }),
+      database.collection<OrderRecord>("orders").createIndex({ userId: 1, createdAt: -1 }),
+      database.collection<OrderEvent>("order_events").createIndex({ orderId: 1, createdAt: 1 }),
+      database.collection<OrderMessage>("order_messages").createIndex({ orderId: 1, createdAt: 1 }),
+    ]);
+  })().catch((error) => {
+    indexesPromise = undefined;
+    throw error;
+  });
+  return indexesPromise;
+}
+
 async function collections() {
   const database = await getDatabase();
-  const orders = database.collection<OrderRecord>("orders");
-  const events = database.collection<OrderEvent>("order_events");
-  const messages = database.collection<OrderMessage>("order_messages");
-  await Promise.all([
-    orders.createIndex({ id: 1 }, { unique: true }),
-    orders.createIndex({ userId: 1, createdAt: -1 }),
-    events.createIndex({ orderId: 1, createdAt: 1 }),
-    messages.createIndex({ orderId: 1, createdAt: 1 }),
-  ]);
-  return { orders, events, messages };
+  await ensureIndexes();
+  return {
+    orders: database.collection<OrderRecord>("orders"),
+    events: database.collection<OrderEvent>("order_events"),
+    messages: database.collection<OrderMessage>("order_messages"),
+  };
 }
 
 export async function recordOrderEvent(orderId: string, type: string, actorId: string, details?: string) {
@@ -66,6 +80,7 @@ export async function createOrder(user: AuthUser, input: { orderId: string; item
   const items: OrderItem[] = input.items.map(({ productId, quantity }) => {
     const product = productsById.get(productId);
     if (!product) throw new Error("One or more products are unavailable.");
+    if (product.type === "server" && product.available === false) throw new Error("One or more products are not available to order.");
     return { productId, name: product.name, type: product.type, quantity, unitPrice: product.price };
   });
   const now = new Date();
@@ -99,8 +114,8 @@ export async function getOrderForUser(orderId: string, userId: string) {
 
 export async function listOrdersForUser(userId: string) {
   const { orders, messages } = await collections();
-  const userOrders = await orders.find({ userId }).sort({ updatedAt: -1 }).toArray();
-  return Promise.all(userOrders.map(async ({ _id, ...order }) => {
+  const userOrders = await orders.find({ userId }, { projection: { _id: 0 } }).sort({ updatedAt: -1 }).toArray();
+  return Promise.all(userOrders.map(async (order) => {
     const [latestMessage] = await messages.find({ orderId: order.id }).sort({ createdAt: -1 }).limit(1).toArray();
     return {
       ...order,

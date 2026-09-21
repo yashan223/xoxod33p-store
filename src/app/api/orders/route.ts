@@ -1,10 +1,14 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
 import { createOrder } from "@/server/orders/orders";
+import { enforceRateLimit } from "@/server/rate-limit";
 
 type OrderRequest = { orderId?: string; items?: { productId?: unknown; quantity?: unknown }[] };
 
 export async function POST(request: Request) {
+  const limited = enforceRateLimit(request, "orders-create", { limit: 30, windowMs: 5 * 60_000 });
+  if (limited) return limited;
+
   const user = await getCurrentUser();
   if (!user) return NextResponse.json({ error: "Sign in before requesting a server." }, { status: 401 });
 
