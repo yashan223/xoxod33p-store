@@ -1,5 +1,11 @@
 const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
+// Resend returns the useful part (e.g. an unverified sender domain) in the body, not the status.
+async function resendFailure(response: Response) {
+  const detail = await response.text().catch(() => "");
+  return new Error(`Resend request failed with status ${response.status}${detail ? `: ${detail.slice(0, 300)}` : "."}`);
+}
+
 export async function sendVerificationEmail(input: { email: string; firstName?: string; token: string }) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.RESEND_FROM_EMAIL;
@@ -19,7 +25,7 @@ export async function sendVerificationEmail(input: { email: string; firstName?: 
     cache: "no-store",
   });
 
-  if (!response.ok) throw new Error(`Resend request failed with status ${response.status}.`);
+  if (!response.ok) throw await resendFailure(response);
 }
 
 export async function sendPasswordResetEmail(input: { email: string; firstName?: string; token: string }) {
@@ -41,5 +47,5 @@ export async function sendPasswordResetEmail(input: { email: string; firstName?:
     cache: "no-store",
   });
 
-  if (!response.ok) throw new Error(`Resend request failed with status ${response.status}.`);
+  if (!response.ok) throw await resendFailure(response);
 }

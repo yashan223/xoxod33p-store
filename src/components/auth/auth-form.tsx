@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 
 type AuthFormProps = { mode: "sign-in" | "sign-up" };
 
-type ApiResponse = { error?: string; message?: string; code?: string; redirectTo?: string };
+type ApiResponse = { error?: string; message?: string; code?: string; redirectTo?: string; emailSent?: boolean };
 
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === "sign-up";
@@ -23,6 +23,11 @@ export function AuthForm({ mode }: AuthFormProps) {
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [canResend, setCanResend] = useState(false);
+  // Only registration opens the verify-email popup; every other notice stays inline.
+  const [pendingVerification, setPendingVerification] = useState("");
+  const [verificationPopupOpen, setVerificationPopupOpen] = useState(false);
+  const [verificationFeedback, setVerificationFeedback] = useState("");
+  const [verificationSendFailed, setVerificationSendFailed] = useState(false);
 
   useEffect(() => {
     if (isSignUp) return;
@@ -35,6 +40,19 @@ export function AuthForm({ mode }: AuthFormProps) {
     });
     return () => window.clearTimeout(timeoutId);
   }, [isSignUp]);
+
+  useEffect(() => {
+    if (!verificationPopupOpen) return;
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") setVerificationPopupOpen(false);
+    }
+    window.addEventListener("keydown", closeOnEscape);
+    return () => window.removeEventListener("keydown", closeOnEscape);
+  }, [verificationPopupOpen]);
+
+  function closeVerificationPopup() {
+    setVerificationPopupOpen(false);
+  }
 
   async function submit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,8 +72,15 @@ export function AuthForm({ mode }: AuthFormProps) {
         setCanResend(result.code === "EMAIL_NOT_VERIFIED");
         return;
       }
-      if (isSignUp) setNotice(result.message ?? "Check your email to verify your account.");
-      else window.location.assign(result.redirectTo ?? "/");
+      if (isSignUp) {
+        setPendingVerification(email.trim().toLowerCase());
+        setVerificationFeedback("");
+        setVerificationSendFailed(result.emailSent === false);
+        setVerificationPopupOpen(true);
+        setPassword("");
+      } else {
+        window.location.assign(result.redirectTo ?? "/");
+      }
     } catch {
       setError("Something went wrong. Please try again.");
     } finally {
@@ -63,20 +88,31 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
-  async function resendVerification() {
+  async function resendVerification(targetEmail: string) {
     setIsLoading(true);
     setError("");
+    setVerificationFeedback("");
     try {
-      const response = await fetch("/api/auth/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email }) });
+      const response = await fetch("/api/auth/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: targetEmail }) });
       const result = await response.json() as ApiResponse;
       if (!response.ok) throw new Error(result.error ?? "Unable to resend the email.");
-      setNotice(result.message ?? "Check your email.");
+      const message = result.message ?? "Check your email.";
+      if (pendingVerification) {
+        setVerificationSendFailed(false);
+        setVerificationFeedback(message);
+      } else setNotice(message);
     } catch (resendError) {
-      setError(resendError instanceof Error ? resendError.message : "Unable to resend the email.");
+      const message = resendError instanceof Error ? resendError.message : "Unable to resend the email.";
+      if (pendingVerification) setVerificationFeedback(message);
+      else setError(message);
     } finally {
       setIsLoading(false);
     }
   }
+
+  const verificationSummary = verificationSendFailed
+    ? <>Your account was created, but we could not send a verification link to <strong>{pendingVerification}</strong> yet.</>
+    : <>We sent a verification link to <strong>{pendingVerification}</strong>. Open it within 24 hours to activate your account.</>;
 
   return (
     <div className="auth-card">
@@ -88,12 +124,14 @@ export function AuthForm({ mode }: AuthFormProps) {
         {!isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Remember me</label>}
         {!isSignUp && <Link className="auth-forgot-link" href="/forgot-password">Forgot password?</Link>}
         {error && <p className="auth-message auth-error">{error}</p>}
+        {notice && <p className="auth-message auth-success">{notice}</p>}
+        {pendingVerification && !verificationPopupOpen && <p className="auth-message auth-success">{verificationFeedback || verificationSummary} <button className="auth-resend" type="button" onClick={() => void resendVerification(pendingVerification)} disabled={isLoading}>{isLoading ? "Sending..." : "Resend verification email"}</button></p>}
         {isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required /> I agree to the <Link href="/terms">Terms & Conditions</Link> and <Link href="/refund-policy">No Refund Policy</Link></label>}
-        <Button type="submit" disabled={isLoading}>{isLoading ? "Please wait..." : isSignUp ? "Create account" : "Sign in"}</Button>
-        {canResend && <button className="auth-resend" type="button" onClick={resendVerification}>Resend verification email</button>}
+        <Button type="submit" disabled={isLoading || Boolean(pendingVerification)}>{isLoading ? "Please wait..." : pendingVerification ? "Verification pending" : isSignUp ? "Create account" : "Sign in"}</Button>
+        {canResend && <button className="auth-resend" type="button" onClick={() => void resendVerification(email)}>Resend verification email</button>}
       </form>
       <p className="auth-switch">{isSignUp ? "Already have an account?" : "Need an account?"} <Link href={isSignUp ? "/sign-in" : "/sign-up"}>{isSignUp ? "Sign in" : "Create one"}</Link></p>
-      {notice && <div className="auth-notice-overlay" role="presentation" onClick={() => setNotice("")}><div className="auth-notice-popup" role="alertdialog" aria-modal="true" aria-labelledby="auth-notice-title" onClick={(event) => event.stopPropagation()}><button className="auth-notice-close" type="button" onClick={() => setNotice("")} aria-label="Close notification"><X size={18} /></button><span className="auth-notice-icon">@</span><h2 id="auth-notice-title">{notice.includes("email") ? "Check your email" : "Success"}</h2><p>{notice}</p><Button type="button" onClick={() => setNotice("")}>Continue</Button></div></div>}
+      {pendingVerification && verificationPopupOpen && <div className="auth-notice-overlay" role="presentation" onClick={closeVerificationPopup}><div className="auth-notice-popup" role="alertdialog" aria-modal="true" aria-labelledby="auth-notice-title" onClick={(event) => event.stopPropagation()}><button className="auth-notice-close" type="button" onClick={closeVerificationPopup} aria-label="Close verification message"><X size={18} /></button><span className="auth-notice-icon">@</span><h2 id="auth-notice-title">Check your email</h2><p>{verificationSummary}</p>{verificationFeedback && <p className="auth-notice-feedback" role="status">{verificationFeedback}</p>}<Button type="button" autoFocus onClick={closeVerificationPopup}>Continue</Button><button className="auth-notice-resend" type="button" onClick={() => void resendVerification(pendingVerification)} disabled={isLoading}>{isLoading ? "Sending..." : "Resend verification email"}</button></div></div>}
     </div>
   );
 }

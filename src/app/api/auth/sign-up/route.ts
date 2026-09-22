@@ -20,8 +20,20 @@ export async function POST(request: Request) {
 
   try {
     const { user, verificationToken } = await createUser({ email, password, firstName: body.firstName, country: body.country });
-    await sendVerificationEmail({ email: user.email, firstName: user.firstName, token: verificationToken });
-    return NextResponse.json({ message: "Check your email to verify your account." }, { status: 201 });
+    // The account already exists at this point, so a mail outage must not fail the request.
+    let emailSent = true;
+    try {
+      await sendVerificationEmail({ email: user.email, firstName: user.firstName, token: verificationToken });
+    } catch (error) {
+      emailSent = false;
+      console.error("Unable to send verification email", error);
+    }
+    return NextResponse.json({
+      message: emailSent
+        ? "Check your email to verify your account."
+        : "Your account was created, but we could not send the verification email. Use the resend option to try again.",
+      emailSent,
+    }, { status: 201 });
   } catch (error) {
     console.error("Unable to create account", error);
     return NextResponse.json({ error: "We could not create your account right now." }, { status: 500 });

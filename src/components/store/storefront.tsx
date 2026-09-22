@@ -67,14 +67,24 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
       .map((id) => document.getElementById(id))
       .filter((section): section is HTMLElement => Boolean(section));
 
-    const updateActiveSection = () => {
-      const currentPosition = window.scrollY + 96;
-      const currentSection = sections.reduce((activeSection, section) => {
-        const sectionTop = section.getBoundingClientRect().top + window.scrollY;
-        return sectionTop <= currentPosition ? section : activeSection;
-      }, sections[0]);
+    if (sections.length === 0) return;
 
-      if (currentSection) setActiveSection(currentSection.id);
+    const updateActiveSection = () => {
+      const viewportCenter = window.innerHeight * 0.42;
+      let closestSection: HTMLElement | null = null;
+      let closestDistance = Number.POSITIVE_INFINITY;
+
+      for (const section of sections) {
+        const distance = Math.abs(section.getBoundingClientRect().top - viewportCenter);
+        if (distance < closestDistance) {
+          closestDistance = distance;
+          closestSection = section;
+        }
+      }
+
+      if (closestSection) {
+        setActiveSection((current) => (current === closestSection!.id ? current : closestSection!.id));
+      }
     };
 
     updateActiveSection();
@@ -179,7 +189,7 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     <main className="store-shell">
       <header className={cn("site-header", isScrolled && "site-header-scrolled")} id="storefront">
         <a className="brand" href="#storefront" aria-label="xoxod33p store home"><Image src="/logo.png" alt="xoxod33p store" className="brand-logo" width={120} height={30} style={{ height: "auto" }} /></a>
-        <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation"><a className={cn(activeSection === "home" && "active")} href="#home" onClick={() => { setActiveSection("home"); setIsMenuOpen(false); }}>Home</a><a className={cn(activeSection === "catalog" && "active")} href="#catalog" onClick={() => { setActiveSection("catalog"); setIsMenuOpen(false); }}>Shop</a><a className={cn(activeSection === "faq" && "active")} href="#faq" onClick={() => { setActiveSection("faq"); setIsMenuOpen(false); }}>FAQ</a><a className={cn(activeSection === "contact" && "active")} href="#contact" onClick={() => { setActiveSection("contact"); setIsMenuOpen(false); }}>Contact</a></nav>
+        <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation"><a className={cn(activeSection === "home" && "active")} href="#home" onClick={() => { setActiveSection("home"); setIsMenuOpen(false); }}>Home</a><a className={cn(activeSection === "catalog" && "active")} href="#catalog" onClick={() => { setActiveSection("catalog"); setIsMenuOpen(false); }}>Shop</a><a className={cn(activeSection === "faq" && "active")} href="#faq" onClick={() => { setActiveSection("faq"); setIsMenuOpen(false); }}>FAQ</a></nav>
         <div className="header-actions">{currentUser ? <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">Dashboard</Link> : <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">Sign in</Link>}<Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}><ShoppingBag size={17} /> Cart <span>{cartQuantity}</span></Button>{currentUser && <form action="/api/auth/sign-out" method="post"><button className="ui-button ui-button-ghost sign-in-button" type="submit">Sign out</button></form>}<Button variant="ghost" size="icon" className="menu-button" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X size={20} /> : <Menu size={20} />}</Button></div>
       </header>
 

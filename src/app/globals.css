@@ -157,7 +157,7 @@
 }
 
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; scroll-padding-top: 62px; }
+html { scroll-behavior: smooth; scroll-padding-top: 40px; }
 body { font-family: var(--font-manrope), sans-serif; margin: 0; }
 button, input { font: inherit; }
 button { cursor: pointer; }
@@ -165,7 +165,7 @@ a { color: inherit; text-decoration: none; }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid #171717; outline-offset: 3px; }
 
 .store-shell { min-height: 100vh; }
-section[id], footer[id] { scroll-margin-top: 62px; }
+section[id], footer[id] { scroll-margin-top: 40px; }
 .brand-intro { align-items: center; background: #f8f8f8; display: flex; min-height: min(800px, calc(100vh - 76px)); overflow: hidden; position: relative; }
 .intro-pixel-blast { inset: 0; opacity: .32; pointer-events: none; position: absolute; transform: scale(1.06); z-index: 0; }
 .brand-intro-content { align-items: center; animation: intro-rise .8s ease-out both; display: flex; flex-direction: column; margin: 0 auto; max-width: 850px; padding: clamp(70px, 10vw, 120px) clamp(28px, 8vw, 110px); position: relative; text-align: center; transform: scale(1.06); z-index: 1; }
@@ -343,6 +343,10 @@ body { background: linear-gradient(135deg, #f7f7f7, #ffffff 48%, #eeeeee); }
   .auth-notice-popup h2 { font-size: 22px; letter-spacing: -.04em; margin: 0 0 8px; }
   .auth-notice-popup p { color: var(--muted-foreground); font-size: 12px; line-height: 1.6; margin: 0 0 22px; }
   .auth-notice-popup .ui-button { width: 100%; }
+  .auth-notice-popup .auth-notice-feedback { color: var(--muted-foreground); font-size: 11px; margin: -12px 0 18px; }
+  .auth-notice-resend { background: none; border: 0; color: var(--muted-foreground); display: block; font: inherit; font-size: 11px; font-weight: 700; margin: 14px auto 0; padding: 0; text-decoration: underline; }
+  .auth-notice-resend:hover { color: var(--foreground); }
+  .auth-notice-resend:disabled { cursor: default; opacity: .6; }
   .card-quantity-control { align-items: center; display: flex; gap: 6px; margin-top: 18px; }
   .card-quantity-control .ui-button { flex: 0 0 auto; height: 34px; min-height: 34px; padding: 0; width: 34px; }
   .card-quantity-control > strong { font-size: 13px; min-width: 20px; text-align: center; }

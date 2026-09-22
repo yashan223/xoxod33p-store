@@ -1,6 +1,4 @@
-const fallbackSiteUrl = "http://localhost:3000";
-
-export const siteName = "xoxod33p store";
+export const siteName = "XOXOD33P STORE";
 export const siteTagline = "COD4 servers, mods and operator support";
 export const siteDescription =
   "Buy private Call of Duty 4 servers, custom mods, and one-time setup services. Browse the catalog, pay securely with Payments.lk, and get direct operator support.";
@@ -15,12 +13,20 @@ export const siteKeywords = [
   "private COD4 server",
 ];
 
+const configuredSiteUrl = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
+
 export const siteUrl = (() => {
-  const configured = process.env.NEXT_PUBLIC_APP_URL ?? process.env.APP_URL;
+  if (!configuredSiteUrl) {
+    throw new Error(
+      "Missing site URL: set NEXT_PUBLIC_APP_URL (or APP_URL) to the public origin, e.g. https://example.com",
+    );
+  }
   try {
-    return new URL(configured ?? fallbackSiteUrl).origin;
+    return new URL(configuredSiteUrl).origin;
   } catch {
-    return fallbackSiteUrl;
+    throw new Error(
+      `Invalid site URL "${configuredSiteUrl}": set NEXT_PUBLIC_APP_URL (or APP_URL) to a valid absolute origin, e.g. https://example.com`,
+    );
   }
 })();
 
