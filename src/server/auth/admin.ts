@@ -1,13 +1,21 @@
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/server/auth/session";
 
-function valuesFromEnv(value: string | undefined) {
-  return new Set((value ?? "").split(",").map((item) => item.trim()).filter(Boolean));
+function valuesFromEnv(value: string | undefined, lowercase = false) {
+  return new Set(
+    (value ?? "")
+      .split(",")
+      .map((item) => (lowercase ? item.trim().toLowerCase() : item.trim()))
+      .filter(Boolean),
+  );
 }
 
 export function isConfiguredAdminEmail(email: string) {
-  const configuredEmails = valuesFromEnv(process.env.ADMIN_EMAILS);
-  const allowedEmails = configuredEmails.size > 0 ? configuredEmails : valuesFromEnv(process.env.ADMIN_DEFAULT_EMAIL);
+  const configuredEmails = valuesFromEnv(process.env.ADMIN_EMAILS, true);
+  const allowedEmails =
+    configuredEmails.size > 0
+      ? configuredEmails
+      : valuesFromEnv(process.env.ADMIN_DEFAULT_EMAIL, true);
   return allowedEmails.has(email.trim().toLowerCase());
 }
 

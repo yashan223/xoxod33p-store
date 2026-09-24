@@ -17,16 +17,40 @@ export function ProductAddToCart({ product }: { product: Product }) {
     let cart: CartItem[] = [];
     try {
       const stored = JSON.parse(window.localStorage.getItem(cartStorageKey) ?? "[]") as unknown;
-      if (Array.isArray(stored)) cart = stored.filter((item): item is CartItem => typeof item === "object" && item !== null && typeof item.productId === "string" && item.quantity === 1);
+      if (Array.isArray(stored))
+        cart = stored.filter(
+          (item): item is CartItem =>
+            typeof item === "object" &&
+            item !== null &&
+            typeof item.productId === "string" &&
+            item.quantity === 1,
+        );
     } catch {
       cart = [];
     }
     if (!cart.some((item) => item.productId === product.id)) {
-      window.localStorage.setItem(cartStorageKey, JSON.stringify([...cart, { productId: product.id, quantity: 1 }]));
+      window.localStorage.setItem(
+        cartStorageKey,
+        JSON.stringify([...cart, { productId: product.id, quantity: 1 }]),
+      );
       window.dispatchEvent(new Event("xoxod33p-cart-updated"));
     }
     setAdded(true);
   }
 
-  return <Button disabled={unavailable} onClick={addToCart}>{unavailable ? "Unavailable" : added ? <><Check size={16} /> Added to cart</> : <>Add to cart <ArrowRight size={16} /></>}</Button>;
+  return (
+    <Button disabled={unavailable} onClick={addToCart}>
+      {unavailable ? (
+        "Unavailable"
+      ) : added ? (
+        <>
+          <Check size={16} /> Added to cart
+        </>
+      ) : (
+        <>
+          Add to cart <ArrowRight size={16} />
+        </>
+      )}
+    </Button>
+  );
 }

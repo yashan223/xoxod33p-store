@@ -23,8 +23,16 @@ export function InactivityLogout({ enabled }: { enabled: boolean }) {
       timeoutId = setTimeout(() => void signOut(), inactivityLimitMs);
     };
 
-    const activityEvents: Array<keyof WindowEventMap> = ["pointerdown", "keydown", "touchstart", "wheel", "scroll"];
-    activityEvents.forEach((eventName) => window.addEventListener(eventName, resetTimer, { passive: true }));
+    const activityEvents: Array<keyof WindowEventMap> = [
+      "pointerdown",
+      "keydown",
+      "touchstart",
+      "wheel",
+      "scroll",
+    ];
+    activityEvents.forEach((eventName) =>
+      window.addEventListener(eventName, resetTimer, { passive: true }),
+    );
     resetTimer();
 
     return () => {

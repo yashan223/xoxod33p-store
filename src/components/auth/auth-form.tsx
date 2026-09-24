@@ -8,7 +8,13 @@ import { Input } from "@/components/ui/input";
 
 type AuthFormProps = { mode: "sign-in" | "sign-up" };
 
-type ApiResponse = { error?: string; message?: string; code?: string; redirectTo?: string; emailSent?: boolean };
+type ApiResponse = {
+  error?: string;
+  message?: string;
+  code?: string;
+  redirectTo?: string;
+  emailSent?: boolean;
+};
 
 export function AuthForm({ mode }: AuthFormProps) {
   const isSignUp = mode === "sign-up";
@@ -64,9 +70,17 @@ export function AuthForm({ mode }: AuthFormProps) {
       const response = await fetch(`/api/auth/${mode}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ firstName, country, acceptedTerms, email, password, rememberMe, redirectTo: new URLSearchParams(window.location.search).get("redirect_url") }),
+        body: JSON.stringify({
+          firstName,
+          country,
+          acceptedTerms,
+          email,
+          password,
+          rememberMe,
+          redirectTo: new URLSearchParams(window.location.search).get("redirect_url"),
+        }),
       });
-      const result = await response.json() as ApiResponse;
+      const result = (await response.json()) as ApiResponse;
       if (!response.ok) {
         setError(result.error ?? "Something went wrong.");
         setCanResend(result.code === "EMAIL_NOT_VERIFIED");
@@ -93,8 +107,12 @@ export function AuthForm({ mode }: AuthFormProps) {
     setError("");
     setVerificationFeedback("");
     try {
-      const response = await fetch("/api/auth/resend", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email: targetEmail }) });
-      const result = await response.json() as ApiResponse;
+      const response = await fetch("/api/auth/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: targetEmail }),
+      });
+      const result = (await response.json()) as ApiResponse;
       if (!response.ok) throw new Error(result.error ?? "Unable to resend the email.");
       const message = result.message ?? "Check your email.";
       if (pendingVerification) {
@@ -102,7 +120,8 @@ export function AuthForm({ mode }: AuthFormProps) {
         setVerificationFeedback(message);
       } else setNotice(message);
     } catch (resendError) {
-      const message = resendError instanceof Error ? resendError.message : "Unable to resend the email.";
+      const message =
+        resendError instanceof Error ? resendError.message : "Unable to resend the email.";
       if (pendingVerification) setVerificationFeedback(message);
       else setError(message);
     } finally {
@@ -110,28 +129,182 @@ export function AuthForm({ mode }: AuthFormProps) {
     }
   }
 
-  const verificationSummary = verificationSendFailed
-    ? <>Your account was created, but we could not send a verification link to <strong>{pendingVerification}</strong> yet.</>
-    : <>We sent a verification link to <strong>{pendingVerification}</strong>. Open it within 24 hours to activate your account.</>;
+  const verificationSummary = verificationSendFailed ? (
+    <>
+      Your account was created, but we could not send a verification link to{" "}
+      <strong>{pendingVerification}</strong> yet.
+    </>
+  ) : (
+    <>
+      We sent a verification link to <strong>{pendingVerification}</strong>. Open it within 24 hours
+      to activate your account.
+    </>
+  );
 
   return (
     <div className="auth-card">
       <form className="auth-fields" onSubmit={submit}>
-        {isSignUp && <label>Full name<Input autoComplete="name" value={firstName} onChange={(event) => setFirstName(event.target.value)} /></label>}
-        {isSignUp && <label>Country<select value={country} onChange={(event) => setCountry(event.target.value)} required><option value="">Select your country</option><option value="Sri Lanka">Sri Lanka</option><option value="India">India</option><option value="Pakistan">Pakistan</option><option value="Bangladesh">Bangladesh</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Australia">Australia</option><option value="Other">Other</option></select></label>}
-        <label>Email address<Input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label>
-        <label>Password<div className="password-field"><Input type={showPassword ? "text" : "password"} autoComplete={isSignUp ? "new-password" : "current-password"} minLength={8} required value={password} onChange={(event) => setPassword(event.target.value)} /><button className="password-toggle" type="button" onClick={() => setShowPassword((visible) => !visible)} aria-label={showPassword ? "Hide password" : "Show password"}>{showPassword ? <EyeOff size={16} /> : <Eye size={16} />}</button></div></label>
-        {!isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={rememberMe} onChange={(event) => setRememberMe(event.target.checked)} /> Remember me</label>}
-        {!isSignUp && <Link className="auth-forgot-link" href="/forgot-password">Forgot password?</Link>}
+        {isSignUp && (
+          <label>
+            Full name
+            <Input
+              autoComplete="name"
+              value={firstName}
+              onChange={(event) => setFirstName(event.target.value)}
+            />
+          </label>
+        )}
+        {isSignUp && (
+          <label>
+            Country
+            <select value={country} onChange={(event) => setCountry(event.target.value)} required>
+              <option value="">Select your country</option>
+              <option value="Sri Lanka">Sri Lanka</option>
+              <option value="India">India</option>
+              <option value="Pakistan">Pakistan</option>
+              <option value="Bangladesh">Bangladesh</option>
+              <option value="United Kingdom">United Kingdom</option>
+              <option value="United States">United States</option>
+              <option value="Australia">Australia</option>
+              <option value="Other">Other</option>
+            </select>
+          </label>
+        )}
+        <label>
+          Email address
+          <Input
+            type="email"
+            autoComplete="email"
+            required
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+          />
+        </label>
+        <label>
+          Password
+          <div className="password-field">
+            <Input
+              type={showPassword ? "text" : "password"}
+              autoComplete={isSignUp ? "new-password" : "current-password"}
+              minLength={8}
+              required
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+            />
+            <button
+              className="password-toggle"
+              type="button"
+              onClick={() => setShowPassword((visible) => !visible)}
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
+          </div>
+        </label>
+        {!isSignUp && (
+          <label className="auth-checkbox">
+            <input
+              type="checkbox"
+              checked={rememberMe}
+              onChange={(event) => setRememberMe(event.target.checked)}
+            />{" "}
+            Remember me
+          </label>
+        )}
+        {!isSignUp && (
+          <Link className="auth-forgot-link" href="/forgot-password">
+            Forgot password?
+          </Link>
+        )}
         {error && <p className="auth-message auth-error">{error}</p>}
         {notice && <p className="auth-message auth-success">{notice}</p>}
-        {pendingVerification && !verificationPopupOpen && <p className="auth-message auth-success">{verificationFeedback || verificationSummary} <button className="auth-resend" type="button" onClick={() => void resendVerification(pendingVerification)} disabled={isLoading}>{isLoading ? "Sending..." : "Resend verification email"}</button></p>}
-        {isSignUp && <label className="auth-checkbox"><input type="checkbox" checked={acceptedTerms} onChange={(event) => setAcceptedTerms(event.target.checked)} required /> I agree to the <Link href="/terms">Terms & Conditions</Link> and <Link href="/refund-policy">No Refund Policy</Link></label>}
-        <Button type="submit" disabled={isLoading || Boolean(pendingVerification)}>{isLoading ? "Please wait..." : pendingVerification ? "Verification pending" : isSignUp ? "Create account" : "Sign in"}</Button>
-        {canResend && <button className="auth-resend" type="button" onClick={() => void resendVerification(email)}>Resend verification email</button>}
+        {pendingVerification && !verificationPopupOpen && (
+          <p className="auth-message auth-success">
+            {verificationFeedback || verificationSummary}{" "}
+            <button
+              className="auth-resend"
+              type="button"
+              onClick={() => void resendVerification(pendingVerification)}
+              disabled={isLoading}
+            >
+              {isLoading ? "Sending..." : "Resend verification email"}
+            </button>
+          </p>
+        )}
+        {isSignUp && (
+          <label className="auth-checkbox">
+            <input
+              type="checkbox"
+              checked={acceptedTerms}
+              onChange={(event) => setAcceptedTerms(event.target.checked)}
+              required
+            />{" "}
+            I agree to the <Link href="/terms">Terms & Conditions</Link> and{" "}
+            <Link href="/refund-policy">No Refund Policy</Link>
+          </label>
+        )}
+        <Button type="submit" disabled={isLoading || Boolean(pendingVerification)}>
+          {isLoading
+            ? "Please wait..."
+            : pendingVerification
+              ? "Verification pending"
+              : isSignUp
+                ? "Create account"
+                : "Sign in"}
+        </Button>
+        {canResend && (
+          <button
+            className="auth-resend"
+            type="button"
+            onClick={() => void resendVerification(email)}
+          >
+            Resend verification email
+          </button>
+        )}
       </form>
-      <p className="auth-switch">{isSignUp ? "Already have an account?" : "Need an account?"} <Link href={isSignUp ? "/sign-in" : "/sign-up"}>{isSignUp ? "Sign in" : "Create one"}</Link></p>
-      {pendingVerification && verificationPopupOpen && <div className="auth-notice-overlay" role="presentation" onClick={closeVerificationPopup}><div className="auth-notice-popup" role="alertdialog" aria-modal="true" aria-labelledby="auth-notice-title" onClick={(event) => event.stopPropagation()}><button className="auth-notice-close" type="button" onClick={closeVerificationPopup} aria-label="Close verification message"><X size={18} /></button><span className="auth-notice-icon">@</span><h2 id="auth-notice-title">Check your email</h2><p>{verificationSummary}</p>{verificationFeedback && <p className="auth-notice-feedback" role="status">{verificationFeedback}</p>}<Button type="button" autoFocus onClick={closeVerificationPopup}>Continue</Button><button className="auth-notice-resend" type="button" onClick={() => void resendVerification(pendingVerification)} disabled={isLoading}>{isLoading ? "Sending..." : "Resend verification email"}</button></div></div>}
+      <p className="auth-switch">
+        {isSignUp ? "Already have an account?" : "Need an account?"}{" "}
+        <Link href={isSignUp ? "/sign-in" : "/sign-up"}>{isSignUp ? "Sign in" : "Create one"}</Link>
+      </p>
+      {pendingVerification && verificationPopupOpen && (
+        <div className="auth-notice-overlay" role="presentation" onClick={closeVerificationPopup}>
+          <div
+            className="auth-notice-popup"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="auth-notice-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <button
+              className="auth-notice-close"
+              type="button"
+              onClick={closeVerificationPopup}
+              aria-label="Close verification message"
+            >
+              <X size={18} />
+            </button>
+            <span className="auth-notice-icon">@</span>
+            <h2 id="auth-notice-title">Check your email</h2>
+            <p>{verificationSummary}</p>
+            {verificationFeedback && (
+              <p className="auth-notice-feedback" role="status">
+                {verificationFeedback}
+              </p>
+            )}
+            <Button type="button" autoFocus onClick={closeVerificationPopup}>
+              Continue
+            </Button>
+            <button
+              className="auth-notice-resend"
+              type="button"
+              onClick={() => void resendVerification(pendingVerification)}
+              disabled={isLoading}
+            >
+              {isLoading ? "Sending..." : "Resend verification email"}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

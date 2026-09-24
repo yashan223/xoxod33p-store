@@ -61,8 +61,12 @@ function ensureIndexes() {
       database.collection<OrderRecord>("orders").createIndex({ userId: 1, createdAt: -1 }),
       database.collection<OrderEvent>("order_events").createIndex({ orderId: 1, createdAt: 1 }),
       database.collection<OrderMessage>("order_messages").createIndex({ orderId: 1, createdAt: 1 }),
-      database.collection<OrderMessage>("order_messages").createIndex({ senderRole: 1, createdAt: -1 }),
-      database.collection<NotificationRecord>("notification_reads").createIndex({ key: 1 }, { unique: true }),
+      database
+        .collection<OrderMessage>("order_messages")
+        .createIndex({ senderRole: 1, createdAt: -1 }),
+      database
+        .collection<NotificationRecord>("notification_reads")
+        .createIndex({ key: 1 }, { unique: true }),
     ]);
   })().catch((error) => {
     indexesPromise = undefined;
@@ -82,38 +86,86 @@ async function collections() {
   };
 }
 
-export async function recordOrderEvent(orderId: string, type: string, actorId: string, details?: string) {
+export async function recordOrderEvent(
+  orderId: string,
+  type: string,
+  actorId: string,
+  details?: string,
+) {
   const { events } = await collections();
   await events.insertOne({ orderId, type, actorId, details, createdAt: new Date() });
 }
 
-export async function createOrder(user: AuthUser, input: { orderId: string; items: { productId: string; quantity: number }[] }) {
-  const products = await getActiveProductsByIds([...new Set(input.items.map((item) => item.productId))]);
+export async function createOrder(
+  user: AuthUser,
+  input: { orderId: string; items: { productId: string; quantity: number }[] },
+) {
+  const products = await getActiveProductsByIds([
+    ...new Set(input.items.map((item) => item.productId)),
+  ]);
   const productsById = new Map(products.map((product) => [product.id, product]));
   const items: OrderItem[] = input.items.map(({ productId, quantity }) => {
     const product = productsById.get(productId);
     if (!product) throw new Error("One or more products are unavailable.");
-    if (product.type === "server" && product.available === false) throw new Error("One or more products are not available to order.");
-    return { productId, name: product.name, type: product.type, quantity, unitPrice: product.price };
+    if (product.type === "server" && product.available === false)
+      throw new Error("One or more products are not available to order.");
+    return {
+      productId,
+      name: product.name,
+      type: product.type,
+      quantity,
+      unitPrice: product.price,
+    };
   });
   const now = new Date();
   const { orders, events } = await collections();
-  const order: OrderRecord = { id: input.orderId, userId: user.id, email: user.email, items, status: "requested", paymentStatus: "pending", createdAt: now, updatedAt: now };
+  const order: OrderRecord = {
+    id: input.orderId,
+    userId: user.id,
+    email: user.email,
+    items,
+    status: "requested",
+    paymentStatus: "pending",
+    createdAt: now,
+    updatedAt: now,
+  };
   await orders.insertOne(order);
-  await events.insertOne({ orderId: order.id, type: "order.requested", actorId: user.id, details: "Customer submitted an order request.", createdAt: now });
+  await events.insertOne({
+    orderId: order.id,
+    type: "order.requested",
+    actorId: user.id,
+    details: "Customer submitted an order request.",
+    createdAt: now,
+  });
   return order;
 }
 
 export async function markOrderPaid(orderId: string, paymentId: string, amountCents: number) {
   const { orders, events } = await collections();
   const now = new Date();
-  const order = await orders.findOne({ id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } });
+  const order = await orders.findOne({
+    id: orderId,
+    status: { $in: ["requested", "accepted"] },
+    paymentStatus: { $ne: "paid" },
+  });
   if (!order) return false;
-  const expectedAmountCents = order.items.reduce((total, item) => total + item.unitPrice * item.quantity * 100, 0);
+  const expectedAmountCents = order.items.reduce(
+    (total, item) => total + Math.round(item.unitPrice * 100) * item.quantity,
+    0,
+  );
   if (amountCents !== expectedAmountCents) return false;
-  const result = await orders.updateOne({ id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } }, { $set: { paymentStatus: "paid", updatedAt: now } });
+  const result = await orders.updateOne(
+    { id: orderId, status: { $in: ["requested", "accepted"] }, paymentStatus: { $ne: "paid" } },
+    { $set: { paymentStatus: "paid", updatedAt: now } },
+  );
   if (result.matchedCount === 0) return false;
-  await events.insertOne({ orderId, type: "payment.succeeded", actorId: "payments.lk", details: paymentId, createdAt: now });
+  await events.insertOne({
+    orderId,
+    type: "payment.succeeded",
+    actorId: "payments.lk",
+    details: paymentId,
+    createdAt: now,
+  });
   return true;
 }
 
@@ -127,14 +179,25 @@ export async function getOrderForUser(orderId: string, userId: string) {
 
 export async function listOrdersForUser(userId: string) {
   const { orders, messages } = await collections();
-  const userOrders = await orders.find({ userId }, { projection: { _id: 0 } }).sort({ updatedAt: -1 }).toArray();
-  return Promise.all(userOrders.map(async (order) => {
-    const [latestMessage] = await messages.find({ orderId: order.id }).sort({ createdAt: -1 }).limit(1).toArray();
-    return {
-      ...order,
-      latestMessage: latestMessage ? { body: latestMessage.body, createdAt: latestMessage.createdAt } : null,
-    };
-  }));
+  const userOrders = await orders
+    .find({ userId }, { projection: { _id: 0 } })
+    .sort({ updatedAt: -1 })
+    .toArray();
+  return Promise.all(
+    userOrders.map(async (order) => {
+      const [latestMessage] = await messages
+        .find({ orderId: order.id })
+        .sort({ createdAt: -1 })
+        .limit(1)
+        .toArray();
+      return {
+        ...order,
+        latestMessage: latestMessage
+          ? { body: latestMessage.body, createdAt: latestMessage.createdAt }
+          : null,
+      };
+    }),
+  );
 }
 
 export async function getOrderForAdmin(orderId: string) {
@@ -147,7 +210,12 @@ export async function getOrderForAdmin(orderId: string) {
 
 export async function canDownloadProduct(orderId: string, userId: string, productId: string) {
   const { orders } = await collections();
-  const order = await orders.findOne({ id: orderId, userId, paymentStatus: "paid", items: { $elemMatch: { productId, type: "mod" } } });
+  const order = await orders.findOne({
+    id: orderId,
+    userId,
+    paymentStatus: "paid",
+    items: { $elemMatch: { productId, type: "mod" } },
+  });
   return Boolean(order);
 }
 
@@ -169,18 +237,28 @@ export async function listMessageNotifications(input: { userId: string; isAdmin:
   const { orders, messages, reads } = await collections();
   const orderIds = input.isAdmin
     ? (await orders.find({}, { projection: { id: 1 } }).toArray()).map((order) => order.id)
-    : (await orders.find({ userId: input.userId }, { projection: { id: 1 } }).toArray()).map((order) => order.id);
+    : (await orders.find({ userId: input.userId }, { projection: { id: 1 } }).toArray()).map(
+        (order) => order.id,
+      );
   if (orderIds.length === 0) return [];
 
   const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
   const [relevantMessages, readKeys] = await Promise.all([
     messages
-      .find({ orderId: { $in: orderIds }, senderRole: input.isAdmin ? "customer" : "admin", createdAt: { $gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) } })
+      .find({
+        orderId: { $in: orderIds },
+        senderRole: input.isAdmin ? "customer" : "admin",
+        createdAt: { $gt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) },
+      })
       .sort({ createdAt: -1 })
       .limit(200)
       .toArray(),
     reads
-      .find({ key: new RegExp(`^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`) })
+      .find({
+        key: new RegExp(
+          `^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`,
+        ),
+      })
       .toArray()
       .catch(() => [] as NotificationRecord[]),
   ]);
@@ -198,7 +276,11 @@ export async function listMessageNotifications(input: { userId: string; isAdmin:
   }));
 }
 
-export async function markMessageNotificationsRead(input: { userId: string; isAdmin: boolean; keys: string[] }) {
+export async function markMessageNotificationsRead(input: {
+  userId: string;
+  isAdmin: boolean;
+  keys: string[];
+}) {
   if (input.keys.length === 0) return;
   const { reads } = await collections();
   const keyPrefix = input.isAdmin ? "a:" : `u:${input.userId}:`;
@@ -207,14 +289,22 @@ export async function markMessageNotificationsRead(input: { userId: string; isAd
     input.keys
       .filter((key) => /^[\w-]+:[a-f0-9]{32}$/.test(key))
       .map((key) =>
-        reads.updateOne({ key: `${keyPrefix}${key}` }, { $setOnInsert: { key: `${keyPrefix}${key}`, userId: input.userId, readAt } }, { upsert: true }),
+        reads.updateOne(
+          { key: `${keyPrefix}${key}` },
+          { $setOnInsert: { key: `${keyPrefix}${key}`, userId: input.userId, readAt } },
+          { upsert: true },
+        ),
       ),
   );
 }
 
 export async function listAdminMessageThreads() {
   const { orders, messages, reads } = await collections();
-  const adminOrders = await orders.find({}, { projection: { id: 1, email: 1, status: 1, paymentStatus: 1, updatedAt: 1 } }).sort({ updatedAt: -1 }).limit(200).toArray();
+  const adminOrders = await orders
+    .find({}, { projection: { id: 1, email: 1, status: 1, paymentStatus: 1, updatedAt: 1 } })
+    .sort({ updatedAt: -1 })
+    .limit(200)
+    .toArray();
   if (adminOrders.length === 0) return [];
 
   const orderIds = adminOrders.map((order) => order.id);
@@ -226,36 +316,69 @@ export async function listAdminMessageThreads() {
       .limit(500)
       .toArray(),
     reads
-      .find({ key: new RegExp(`^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`) })
+      .find({
+        key: new RegExp(
+          `^${escapeRegExp(keyPrefix)}(?:${orderIds.map(escapeRegExp).join("|")})[:.]`,
+        ),
+      })
       .toArray()
       .catch(() => [] as NotificationRecord[]),
   ]);
 
   const readKeySet = new Set(readKeys.map((record) => record.key));
   const threads = adminOrders.map((order) => {
-    const orderMessages = relevantMessages.filter((message) => message.orderId === order.id).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    const orderMessages = relevantMessages
+      .filter((message) => message.orderId === order.id)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
     const latest = orderMessages[0];
-    const unreadCount = orderMessages.filter((message) => !readKeySet.has(`${keyPrefix}${order.id}:${message.id}`)).length;
+    const unreadCount = orderMessages.filter(
+      (message) => !readKeySet.has(`${keyPrefix}${order.id}:${message.id}`),
+    ).length;
     return {
       orderId: order.id,
       email: order.email,
       status: order.status,
       paymentStatus: order.paymentStatus,
       updatedAt: order.updatedAt.toISOString(),
-      latestMessage: latest ? { id: latest.id, body: latest.body, senderRole: latest.senderRole, createdAt: latest.createdAt.toISOString() } : null,
+      latestMessage: latest
+        ? {
+            id: latest.id,
+            body: latest.body,
+            senderRole: latest.senderRole,
+            createdAt: latest.createdAt.toISOString(),
+          }
+        : null,
       unreadCount,
     };
   });
   return threads;
 }
 
-export async function addOrderMessage(orderId: string, senderId: string, senderRole: "customer" | "admin", body: string) {
+export async function addOrderMessage(
+  orderId: string,
+  senderId: string,
+  senderRole: "customer" | "admin",
+  body: string,
+) {
   const { orders, messages, events } = await collections();
   const order = await orders.findOne({ id: orderId });
   if (!order) return null;
-  const message: OrderMessage = { id: randomBytes(16).toString("hex"), orderId, senderId, senderRole, body: body.trim(), createdAt: new Date() };
+  const message: OrderMessage = {
+    id: randomBytes(16).toString("hex"),
+    orderId,
+    senderId,
+    senderRole,
+    body: body.trim(),
+    createdAt: new Date(),
+  };
   await messages.insertOne(message);
-  await events.insertOne({ orderId, type: "message.created", actorId: senderId, details: senderRole, createdAt: message.createdAt });
+  await events.insertOne({
+    orderId,
+    type: "message.created",
+    actorId: senderId,
+    details: senderRole,
+    createdAt: message.createdAt,
+  });
   await orders.updateOne({ id: orderId }, { $set: { updatedAt: message.createdAt } });
   return message;
 }

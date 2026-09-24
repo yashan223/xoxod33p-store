@@ -8,5 +8,9 @@ export default async function AdminProductsPage() {
   await requireAdmin();
   const products = await getAdminProducts();
 
-  return <main className="admin-page"><ProductManager products={products} /></main>;
+  return (
+    <main className="admin-page">
+      <ProductManager products={products} />
+    </main>
+  );
 }

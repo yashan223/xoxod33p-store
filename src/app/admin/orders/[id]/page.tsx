@@ -10,5 +10,9 @@ export default async function AdminOrderPage({ params }: PageProps) {
   const { id } = await params;
   const order = await getOrderForAdmin(id);
   if (!order) notFound();
-  return <main className="admin-page"><OrderChat admin order={JSON.parse(JSON.stringify(order))} /></main>;
+  return (
+    <main className="admin-page">
+      <OrderChat admin order={JSON.parse(JSON.stringify(order))} />
+    </main>
+  );
 }

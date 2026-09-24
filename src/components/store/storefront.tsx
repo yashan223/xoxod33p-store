@@ -4,7 +4,18 @@ import { useEffect, useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Check, Menu, PackageCheck, Search, Server, ShoppingBag, Trash2, Wrench, X } from "lucide-react";
+import {
+  ArrowRight,
+  Check,
+  Menu,
+  PackageCheck,
+  Search,
+  Server,
+  ShoppingBag,
+  Trash2,
+  Wrench,
+  X,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,10 +32,26 @@ const categories = [
 ];
 
 const faqItems = [
-  { question: "How quickly will my server be ready?", answer: "Most server plans are prepared within one business day. Your operator will send the connection details and next steps after checkout." },
-  { question: "Are the mod packs compatible with my server?", answer: "Each product lists its version and client requirements. If you are unsure, contact support before purchasing and we will help you choose." },
-  { question: "How does payment work?", answer: "Checkout is handled securely by Payments.lk in Sri Lankan rupees. We never store your card details." },
-  { question: "Can I get help after purchasing?", answer: "Yes. Every purchase includes operator support for setup, configuration, and getting your community online." },
+  {
+    question: "How quickly will my server be ready?",
+    answer:
+      "Most server plans are prepared within one business day. Your operator will send the connection details and next steps after checkout.",
+  },
+  {
+    question: "Are the mod packs compatible with my server?",
+    answer:
+      "Each product lists its version and client requirements. If you are unsure, contact support before purchasing and we will help you choose.",
+  },
+  {
+    question: "How does payment work?",
+    answer:
+      "Checkout is handled securely by Payments.lk in Sri Lankan rupees. We never store your card details.",
+  },
+  {
+    question: "Can I get help after purchasing?",
+    answer:
+      "Yes. Every purchase includes operator support for setup, configuration, and getting your community online.",
+  },
 ];
 
 type CartItem = { productId: string; quantity: number };
@@ -35,13 +62,20 @@ function formatPrice(price: number) {
 }
 
 function createOrderReference() {
-  const unique = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID()
-    : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+  const unique =
+    typeof crypto !== "undefined" && "randomUUID" in crypto
+      ? crypto.randomUUID()
+      : `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
   return `loadout-${unique}`;
 }
 
-export function Storefront({ products, currentUser }: { products: Product[]; currentUser: { email: string; firstName?: string } | null }) {
+export function Storefront({
+  products,
+  currentUser,
+}: {
+  products: Product[];
+  currentUser: { email: string; firstName?: string } | null;
+}) {
   const router = useRouter();
   const [category, setCategory] = useState("all");
   const [query, setQuery] = useState("");
@@ -83,7 +117,9 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
       }
 
       if (closestSection) {
-        setActiveSection((current) => (current === closestSection!.id ? current : closestSection!.id));
+        setActiveSection((current) =>
+          current === closestSection!.id ? current : closestSection!.id,
+        );
       }
     };
 
@@ -99,13 +135,25 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
       try {
-        const storedCart = JSON.parse(window.localStorage.getItem(cartStorageKey) ?? "null") as unknown;
+        const storedCart = JSON.parse(
+          window.localStorage.getItem(cartStorageKey) ?? "null",
+        ) as unknown;
         if (Array.isArray(storedCart)) {
-          setCart(storedCart.filter((item): item is CartItem => {
-            if (typeof item !== "object" || item === null || typeof item.productId !== "string" || item.quantity !== 1) return false;
-            const product = products.find((candidate) => candidate.id === item.productId);
-            return Boolean(product && !(product.type === "server" && product.available === false));
-          }));
+          setCart(
+            storedCart.filter((item): item is CartItem => {
+              if (
+                typeof item !== "object" ||
+                item === null ||
+                typeof item.productId !== "string" ||
+                item.quantity !== 1
+              )
+                return false;
+              const product = products.find((candidate) => candidate.id === item.productId);
+              return Boolean(
+                product && !(product.type === "server" && product.available === false),
+              );
+            }),
+          );
         }
       } catch {
         window.localStorage.removeItem(cartStorageKey);
@@ -129,16 +177,25 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
     const normalizedQuery = query.trim().toLowerCase();
     return products.filter((product) => {
       const matchesCategory = category === "all" || product.type === category;
-      const matchesQuery = !normalizedQuery || `${product.name} ${product.description} ${product.meta}`.toLowerCase().includes(normalizedQuery);
+      const matchesQuery =
+        !normalizedQuery ||
+        `${product.name} ${product.description} ${product.meta}`
+          .toLowerCase()
+          .includes(normalizedQuery);
       return matchesCategory && matchesQuery;
     });
   }, [category, products, query]);
 
   const cartProducts = cart.flatMap((item) => {
     const product = products.find((candidate) => candidate.id === item.productId);
-    return product && !(product.type === "server" && product.available === false) ? [{ product, quantity: item.quantity }] : [];
+    return product && !(product.type === "server" && product.available === false)
+      ? [{ product, quantity: item.quantity }]
+      : [];
   });
-  const cartTotal = cartProducts.reduce((total, item) => total + item.product.price * item.quantity, 0);
+  const cartTotal = cartProducts.reduce(
+    (total, item) => total + item.product.price * item.quantity,
+    0,
+  );
   const cartQuantity = cartProducts.reduce((total, item) => total + item.quantity, 0);
 
   function addToCart(productId: string) {
@@ -162,7 +219,10 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
       const response = await fetch("/api/orders", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: createOrderReference(), items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })) }),
+        body: JSON.stringify({
+          orderId: createOrderReference(),
+          items: cartProducts.map(({ product, quantity }) => ({ productId: product.id, quantity })),
+        }),
       });
       if (response.status === 401) {
         router.push(`/sign-in?redirect_url=${encodeURIComponent("/#catalog")}`);
@@ -175,8 +235,9 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ orderId: result.orderId }),
       });
-      const paymentResult = await paymentResponse.json() as { url?: string; error?: string };
-      if (!paymentResponse.ok || !paymentResult.url) throw new Error(paymentResult.error ?? "Unable to open payment.");
+      const paymentResult = (await paymentResponse.json()) as { url?: string; error?: string };
+      if (!paymentResponse.ok || !paymentResult.url)
+        throw new Error(paymentResult.error ?? "Unable to open payment.");
       window.localStorage.removeItem(cartStorageKey);
       window.location.assign(paymentResult.url);
     } catch (error) {
@@ -188,9 +249,78 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
   return (
     <main className="store-shell">
       <header className={cn("site-header", isScrolled && "site-header-scrolled")} id="storefront">
-        <a className="brand" href="#storefront" aria-label="xoxod33p store home"><Image src="/logo.png" alt="xoxod33p store" className="brand-logo" width={120} height={30} style={{ height: "auto" }} /></a>
-        <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation"><a className={cn(activeSection === "home" && "active")} href="#home" onClick={() => { setActiveSection("home"); setIsMenuOpen(false); }}>Home</a><a className={cn(activeSection === "catalog" && "active")} href="#catalog" onClick={() => { setActiveSection("catalog"); setIsMenuOpen(false); }}>Shop</a><a className={cn(activeSection === "faq" && "active")} href="#faq" onClick={() => { setActiveSection("faq"); setIsMenuOpen(false); }}>FAQ</a></nav>
-        <div className="header-actions">{currentUser ? <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">Dashboard</Link> : <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">Sign in</Link>}<Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}><ShoppingBag size={17} /> Cart <span>{cartQuantity}</span></Button>{currentUser && <form action="/api/auth/sign-out" method="post"><button className="ui-button ui-button-ghost sign-in-button" type="submit">Sign out</button></form>}<Button variant="ghost" size="icon" className="menu-button" onClick={() => setIsMenuOpen((open) => !open)} aria-label={isMenuOpen ? "Close menu" : "Open menu"}>{isMenuOpen ? <X size={20} /> : <Menu size={20} />}</Button></div>
+        <a className="brand" href="#storefront" aria-label="xoxod33p store home">
+          <Image
+            src="/logo.png"
+            alt="xoxod33p store"
+            className="brand-logo"
+            width={120}
+            height={30}
+            style={{ height: "auto" }}
+          />
+        </a>
+        <nav className={cn("site-nav", isMenuOpen && "site-nav-open")} aria-label="Main navigation">
+          <a
+            className={cn(activeSection === "home" && "active")}
+            href="#home"
+            onClick={() => {
+              setActiveSection("home");
+              setIsMenuOpen(false);
+            }}
+          >
+            Home
+          </a>
+          <a
+            className={cn(activeSection === "catalog" && "active")}
+            href="#catalog"
+            onClick={() => {
+              setActiveSection("catalog");
+              setIsMenuOpen(false);
+            }}
+          >
+            Shop
+          </a>
+          <a
+            className={cn(activeSection === "faq" && "active")}
+            href="#faq"
+            onClick={() => {
+              setActiveSection("faq");
+              setIsMenuOpen(false);
+            }}
+          >
+            FAQ
+          </a>
+        </nav>
+        <div className="header-actions">
+          {currentUser ? (
+            <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">
+              Dashboard
+            </Link>
+          ) : (
+            <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">
+              Sign in
+            </Link>
+          )}
+          <Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}>
+            <ShoppingBag size={17} /> Cart <span>{cartQuantity}</span>
+          </Button>
+          {currentUser && (
+            <form action="/api/auth/sign-out" method="post">
+              <button className="ui-button ui-button-ghost sign-in-button" type="submit">
+                Sign out
+              </button>
+            </form>
+          )}
+          <Button
+            variant="ghost"
+            size="icon"
+            className="menu-button"
+            onClick={() => setIsMenuOpen((open) => !open)}
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+          >
+            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </Button>
+        </div>
       </header>
 
       <section className="brand-intro" id="home" aria-label="Welcome to xoxod33p store">
@@ -211,21 +341,305 @@ export function Storefront({ products, currentUser }: { products: Product[]; cur
           />
         </div>
         <div className="brand-intro-content">
-          <Image src="/logo.png" alt="xoxod33p store" className="intro-logo" width={560} height={150} priority style={{ height: "auto" }} />
-          <p>Build your ideal COD4 experience with reliable servers, battle-tested mods, and support that keeps your community in the game.</p>
-          <a className="intro-enter" href="#catalog">Explore the store <ArrowRight size={16} /></a>
+          <Image
+            src="/logo.png"
+            alt="xoxod33p store"
+            className="intro-logo"
+            width={560}
+            height={150}
+            priority
+            style={{ height: "auto" }}
+          />
+          <p>
+            Build your ideal COD4 experience with reliable servers, battle-tested mods, and support
+            that keeps your community in the game.
+          </p>
+          <a className="intro-enter" href="#catalog">
+            Explore the store <ArrowRight size={16} />
+          </a>
         </div>
-        <span className="intro-corner intro-corner-left">BUILT IN SRI LANKA / FOR PLAYERS EVERYWHERE</span>
+        <span className="intro-corner intro-corner-left">
+          BUILT IN SRI LANKA / FOR PLAYERS EVERYWHERE
+        </span>
         <span className="intro-corner intro-corner-right">SERVERS / MODS / SUPPORT</span>
       </section>
 
-      <section className="catalog-section" id="catalog"><div className="section-heading"><div><p className="section-kicker">Shop the collection</p><h2>Find your Products</h2></div></div><div className="catalog-toolbar"><div className="category-tabs" role="tablist" aria-label="Product categories">{categories.map((item) => <button className={cn(category === item.id && "selected")} key={item.id} onClick={() => setCategory(item.id)} role="tab" aria-selected={category === item.id} type="button">{item.label}</button>)}</div><label className="search-field"><Search size={16} /><Input type="search" placeholder="Search products" value={query} onChange={(event) => setQuery(event.target.value)} /></label></div><div className="product-grid">{visibleProducts.map((product) => { const inCart = cart.some((item) => item.productId === product.id); const isService = product.type === "service"; const isAvailable = product.type !== "server" || product.available !== false; return <Card className="product-card" key={product.id} onClick={() => router.push(`/products/${product.id}`)} onKeyDown={(event) => { if (event.key === "Enter" || event.key === " ") router.push(`/products/${product.id}`); }} role="link" tabIndex={0}><div className={cn("product-art", `product-art-${product.accent}`)}><span className="product-art-label">{product.type === "server" ? "SERVER" : product.type === "service" ? "SERVICE" : "MOD PACK"}</span>{product.type === "server" && <span className={cn("product-availability", isAvailable ? "available" : "unavailable")}>{isAvailable ? "Available" : "Unavailable"}</span>}<div className="product-art-symbol">{product.type === "server" ? <Server size={42} strokeWidth={1.4} /> : product.type === "service" ? <Wrench size={42} strokeWidth={1.4} /> : <PackageCheck size={42} strokeWidth={1.4} />}</div>{product.type !== "server" && product.tag && <Badge>{product.tag}</Badge>}</div><CardContent><div className="product-info"><div><h3>{product.name}</h3><p>{product.description}</p></div><div className="product-meta"><strong>{formatPrice(product.price)}<small>{product.type === "server" ? " / month" : isService ? " one-time setup" : " one-time"}</small></strong></div></div>{product.type === "server" && !isAvailable ? <Button variant="outline" className="add-button" disabled>Unavailable</Button> : <Button variant={inCart ? "secondary" : "outline"} className="add-button" onClick={(event) => { event.stopPropagation(); addToCart(product.id); }}>{inCart ? <><Check size={15} /> Added</> : <>Add to cart <ArrowRight size={15} /></>}</Button>}</CardContent></Card>; })}</div>{visibleProducts.length === 0 && <p className="empty-state">No products match your search.</p>}</section>
+      <section className="catalog-section" id="catalog">
+        <div className="section-heading">
+          <div>
+            <p className="section-kicker">Shop the collection</p>
+            <h2>Find your Products</h2>
+          </div>
+        </div>
+        <div className="catalog-toolbar">
+          <div className="category-tabs" role="tablist" aria-label="Product categories">
+            {categories.map((item) => (
+              <button
+                className={cn(category === item.id && "selected")}
+                key={item.id}
+                onClick={() => setCategory(item.id)}
+                role="tab"
+                aria-selected={category === item.id}
+                type="button"
+              >
+                {item.label}
+              </button>
+            ))}
+          </div>
+          <label className="search-field">
+            <Search size={16} />
+            <Input
+              type="search"
+              placeholder="Search products"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+            />
+          </label>
+        </div>
+        <div className="product-grid">
+          {visibleProducts.map((product) => {
+            const inCart = cart.some((item) => item.productId === product.id);
+            const isService = product.type === "service";
+            const isAvailable = product.type !== "server" || product.available !== false;
+            return (
+              <Card
+                className="product-card"
+                key={product.id}
+                onClick={() => router.push(`/products/${product.id}`)}
+                onKeyDown={(event) => {
+                  if (event.key === "Enter" || event.key === " ")
+                    router.push(`/products/${product.id}`);
+                }}
+                role="link"
+                tabIndex={0}
+              >
+                <div className={cn("product-art", `product-art-${product.accent}`)}>
+                  <span className="product-art-label">
+                    {product.type === "server"
+                      ? "SERVER"
+                      : product.type === "service"
+                        ? "SERVICE"
+                        : "MOD PACK"}
+                  </span>
+                  {product.type === "server" && (
+                    <span
+                      className={cn(
+                        "product-availability",
+                        isAvailable ? "available" : "unavailable",
+                      )}
+                    >
+                      {isAvailable ? "Available" : "Unavailable"}
+                    </span>
+                  )}
+                  <div className="product-art-symbol">
+                    {product.type === "server" ? (
+                      <Server size={42} strokeWidth={1.4} />
+                    ) : product.type === "service" ? (
+                      <Wrench size={42} strokeWidth={1.4} />
+                    ) : (
+                      <PackageCheck size={42} strokeWidth={1.4} />
+                    )}
+                  </div>
+                  {product.type !== "server" && product.tag && <Badge>{product.tag}</Badge>}
+                </div>
+                <CardContent>
+                  <div className="product-info">
+                    <div>
+                      <h3>{product.name}</h3>
+                      <p>{product.description}</p>
+                    </div>
+                    <div className="product-meta">
+                      <strong>
+                        {formatPrice(product.price)}
+                        <small>
+                          {product.type === "server"
+                            ? " / month"
+                            : isService
+                              ? " one-time setup"
+                              : " one-time"}
+                        </small>
+                      </strong>
+                    </div>
+                  </div>
+                  {product.type === "server" && !isAvailable ? (
+                    <Button variant="outline" className="add-button" disabled>
+                      Unavailable
+                    </Button>
+                  ) : (
+                    <Button
+                      variant={inCart ? "secondary" : "outline"}
+                      className="add-button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        addToCart(product.id);
+                      }}
+                    >
+                      {inCart ? (
+                        <>
+                          <Check size={15} /> Added
+                        </>
+                      ) : (
+                        <>
+                          Add to cart <ArrowRight size={15} />
+                        </>
+                      )}
+                    </Button>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
+        </div>
+        {visibleProducts.length === 0 && (
+          <p className="empty-state">No products match your search.</p>
+        )}
+      </section>
 
-      <section className="faq-section" id="faq"><div className="faq-heading"><p className="section-kicker">Quick answers</p><h2>Everything you need<br />before game time.</h2></div><div className="faq-list">{faqItems.map((item) => <details key={item.question}><summary>{item.question}<span>+</span></summary><p>{item.answer}</p></details>)}</div></section>
+      <section className="faq-section" id="faq">
+        <div className="faq-heading">
+          <p className="section-kicker">Quick answers</p>
+          <h2>
+            Everything you need
+            <br />
+            before game time.
+          </h2>
+        </div>
+        <div className="faq-list">
+          {faqItems.map((item) => (
+            <details key={item.question}>
+              <summary>
+                {item.question}
+                <span>+</span>
+              </summary>
+              <p>{item.answer}</p>
+            </details>
+          ))}
+        </div>
+      </section>
 
-      <footer className="site-footer" id="contact"><div className="footer-top"><div className="footer-brand"><Image src="/logo.png" alt="xoxod33p store" className="footer-logo" width={160} height={34} style={{ height: "auto" }} /></div></div><div className="footer-links"><div><span>Store</span><a href="#catalog">All products</a><a href="#catalog">Game servers</a><a href="#catalog">Mods & tools</a></div><div><span>Company</span><a href="#faq">FAQ</a><a href="#contact">Contact</a></div><div><span>Legal</span><Link href="/terms">Terms & Conditions</Link><Link href="/refund-policy">No Refund Policy</Link></div><div><span>Contact</span><a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a><a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">WhatsApp: +94 77 123 4567</a><small>Response within one business day.</small></div></div><div className="footer-bottom"><span>© 2026 xoxod33p store. Built for better game nights.</span><span className="footer-code">SERVERS / MODS / SUPPORT</span></div></footer>
+      <footer className="site-footer" id="contact">
+        <div className="footer-top">
+          <div className="footer-brand">
+            <Image
+              src="/logo.png"
+              alt="xoxod33p store"
+              className="footer-logo"
+              width={160}
+              height={34}
+              style={{ height: "auto" }}
+            />
+          </div>
+        </div>
+        <div className="footer-links">
+          <div>
+            <span>Store</span>
+            <a href="#catalog">All products</a>
+            <a href="#catalog">Game servers</a>
+            <a href="#catalog">Mods & tools</a>
+          </div>
+          <div>
+            <span>Company</span>
+            <a href="#faq">FAQ</a>
+            <a href="#contact">Contact</a>
+          </div>
+          <div>
+            <span>Legal</span>
+            <Link href="/terms">Terms & Conditions</Link>
+            <Link href="/refund-policy">No Refund Policy</Link>
+          </div>
+          <div>
+            <span>Contact</span>
+            <a href="mailto:support@xoxod33p.store">support@xoxod33p.store</a>
+            <a href="https://wa.me/94771234567" target="_blank" rel="noreferrer">
+              WhatsApp: +94 77 123 4567
+            </a>
+            <small>Response within one business day.</small>
+          </div>
+        </div>
+        <div className="footer-bottom">
+          <span>© 2026 xoxod33p store. Built for better game nights.</span>
+          <span className="footer-code">SERVERS / MODS / SUPPORT</span>
+        </div>
+      </footer>
 
-      {isCartOpen && <div className="cart-overlay" role="presentation" onClick={() => setIsCartOpen(false)}><aside className="cart-drawer" role="dialog" aria-modal="true" aria-label="Shopping cart" onClick={(event) => event.stopPropagation()}><div className="drawer-header"><div><p className="section-kicker">Your selection</p><h2>Shopping cart</h2></div><Button variant="ghost" size="icon" onClick={() => setIsCartOpen(false)} aria-label="Close shopping cart"><X size={20} /></Button></div>{cartProducts.length === 0 ? <div className="drawer-empty"><ShoppingBag size={30} /><p>Your cart is empty.</p><span>Add a server, tool, or service to get started.</span></div> : <div className="drawer-items">{cartProducts.map(({ product }) => <div className="drawer-item" key={product.id}><div><strong>{product.name}</strong><span>{product.type === "server" ? "Game server" : product.type === "service" ? "Setup service" : "Mod or tool"}</span></div><div className="drawer-item-actions"><b>{formatPrice(product.price)}</b><Button variant="ghost" size="icon" onClick={() => removeFromCart(product.id)} aria-label={`Remove ${product.name}`}><Trash2 size={15} /></Button></div></div>)}</div>}<div className="drawer-footer"><div><span>Subtotal</span><strong>{formatPrice(cartTotal)}</strong></div><Button className="checkout-button" disabled={cartProducts.length === 0 || checkoutState === "loading"} onClick={startCheckout}>{checkoutState === "loading" ? "Opening payment..." : "Pay now"}<ArrowRight size={16} /></Button><small>{checkoutState === "error" ? checkoutError : "You will continue to secure payment."}</small></div></aside></div>}
+      {isCartOpen && (
+        <div className="cart-overlay" role="presentation" onClick={() => setIsCartOpen(false)}>
+          <aside
+            className="cart-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Shopping cart"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="drawer-header">
+              <div>
+                <p className="section-kicker">Your selection</p>
+                <h2>Shopping cart</h2>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsCartOpen(false)}
+                aria-label="Close shopping cart"
+              >
+                <X size={20} />
+              </Button>
+            </div>
+            {cartProducts.length === 0 ? (
+              <div className="drawer-empty">
+                <ShoppingBag size={30} />
+                <p>Your cart is empty.</p>
+                <span>Add a server, tool, or service to get started.</span>
+              </div>
+            ) : (
+              <div className="drawer-items">
+                {cartProducts.map(({ product }) => (
+                  <div className="drawer-item" key={product.id}>
+                    <div>
+                      <strong>{product.name}</strong>
+                      <span>
+                        {product.type === "server"
+                          ? "Game server"
+                          : product.type === "service"
+                            ? "Setup service"
+                            : "Mod or tool"}
+                      </span>
+                    </div>
+                    <div className="drawer-item-actions">
+                      <b>{formatPrice(product.price)}</b>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removeFromCart(product.id)}
+                        aria-label={`Remove ${product.name}`}
+                      >
+                        <Trash2 size={15} />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+            <div className="drawer-footer">
+              <div>
+                <span>Subtotal</span>
+                <strong>{formatPrice(cartTotal)}</strong>
+              </div>
+              <Button
+                className="checkout-button"
+                disabled={cartProducts.length === 0 || checkoutState === "loading"}
+                onClick={startCheckout}
+              >
+                {checkoutState === "loading" ? "Opening payment..." : "Pay now"}
+                <ArrowRight size={16} />
+              </Button>
+              <small>
+                {checkoutState === "error" ? checkoutError : "You will continue to secure payment."}
+              </small>
+            </div>
+          </aside>
+        </div>
+      )}
     </main>
   );
 }

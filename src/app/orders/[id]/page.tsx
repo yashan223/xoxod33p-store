@@ -7,9 +7,14 @@ import { StorePageHeader } from "@/components/store/store-page-header";
 type PageProps = { params: Promise<{ id: string }> };
 
 export default async function OrderPage({ params }: PageProps) {
-  const user = await requireUser();
   const { id } = await params;
+  const user = await requireUser(`/orders/${encodeURIComponent(id)}`);
   const order = await getOrderForUser(id, user.id);
   if (!order) notFound();
-  return <main className="order-page"><StorePageHeader backHref="/" /><OrderChat order={JSON.parse(JSON.stringify(order))} /></main>;
+  return (
+    <main className="order-page">
+      <StorePageHeader backHref="/" />
+      <OrderChat order={JSON.parse(JSON.stringify(order))} />
+    </main>
+  );
 }

@@ -7,35 +7,62 @@ export async function POST(request: Request) {
   const limited = enforceRateLimit(request, "sign-up", { limit: 5, windowMs: 10 * 60_000 });
   if (limited) return limited;
 
-  const body = await request.json() as { email?: string; password?: string; firstName?: string; country?: string; acceptedTerms?: boolean };
+  const body = (await request.json()) as {
+    email?: string;
+    password?: string;
+    firstName?: string;
+    country?: string;
+    acceptedTerms?: boolean;
+  };
   const email = body.email?.trim().toLowerCase();
   const password = body.password ?? "";
   if (!email || !email.includes("@") || password.length < 8 || body.acceptedTerms !== true) {
-    return NextResponse.json({ error: "Use a valid email and a password of at least 8 characters." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Use a valid email and a password of at least 8 characters." },
+      { status: 400 },
+    );
   }
 
   if (await findUserByEmail(email)) {
-    return NextResponse.json({ error: "An account with that email already exists." }, { status: 409 });
+    return NextResponse.json(
+      { error: "An account with that email already exists." },
+      { status: 409 },
+    );
   }
 
   try {
-    const { user, verificationToken } = await createUser({ email, password, firstName: body.firstName, country: body.country });
+    const { user, verificationToken } = await createUser({
+      email,
+      password,
+      firstName: body.firstName,
+      country: body.country,
+    });
     // The account already exists at this point, so a mail outage must not fail the request.
     let emailSent = true;
     try {
-      await sendVerificationEmail({ email: user.email, firstName: user.firstName, token: verificationToken });
+      await sendVerificationEmail({
+        email: user.email,
+        firstName: user.firstName,
+        token: verificationToken,
+      });
     } catch (error) {
       emailSent = false;
       console.error("Unable to send verification email", error);
     }
-    return NextResponse.json({
-      message: emailSent
-        ? "Check your email to verify your account."
-        : "Your account was created, but we could not send the verification email. Use the resend option to try again.",
-      emailSent,
-    }, { status: 201 });
+    return NextResponse.json(
+      {
+        message: emailSent
+          ? "Check your email to verify your account."
+          : "Your account was created, but we could not send the verification email. Use the resend option to try again.",
+        emailSent,
+      },
+      { status: 201 },
+    );
   } catch (error) {
     console.error("Unable to create account", error);
-    return NextResponse.json({ error: "We could not create your account right now." }, { status: 500 });
+    return NextResponse.json(
+      { error: "We could not create your account right now." },
+      { status: 500 },
+    );
   }
 }

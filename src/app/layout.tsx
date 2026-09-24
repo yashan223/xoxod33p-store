@@ -7,7 +7,7 @@ import { getCurrentSession } from "@/server/auth/session";
 import { InactivityLogout } from "@/components/auth/inactivity-logout";
 import { MessageNotifications } from "@/components/notifications/message-notifications";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 const manrope = Manrope({
   variable: "--font-manrope",
@@ -107,13 +107,22 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       data-scroll-behavior="smooth"
-      className={cn("h-full", "antialiased", manrope.variable, dmMono.variable, "font-sans", geist.variable)}
+      className={cn(
+        "h-full",
+        "antialiased",
+        manrope.variable,
+        dmMono.variable,
+        "font-sans",
+        geist.variable,
+      )}
       suppressHydrationWarning
     >
       <body className="min-h-full flex flex-col">
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData).replace(/</g, "\\u003c") }}
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData).replace(/</g, "\\u003c"),
+          }}
         />
         <InactivityLogout enabled={Boolean(currentSession && !currentSession.rememberMe)} />
         <MessageNotifications enabled={Boolean(currentSession)} />

@@ -16,11 +16,37 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/admin"><span className="brand-mark">X</span><span><strong>xoxod33p</strong><small>ADMIN CONSOLE</small></span></Link>
+        <Link className="admin-brand" href="/admin">
+          <span className="brand-mark">X</span>
+          <span>
+            <strong>xoxod33p</strong>
+            <small>ADMIN CONSOLE</small>
+          </span>
+        </Link>
         <AdminNav />
-        <div className="admin-sidebar-footer"><Link className="admin-store-link" href="/">Back to store <span>↗</span></Link><form action="/api/auth/sign-out" method="post"><button className="admin-sign-out admin-sidebar-sign-out" type="submit">Sign out</button></form></div>
+        <div className="admin-sidebar-footer">
+          <Link className="admin-store-link" href="/">
+            Back to store <span>↗</span>
+          </Link>
+          <form action="/api/auth/sign-out" method="post">
+            <button className="admin-sign-out admin-sidebar-sign-out" type="submit">
+              Sign out
+            </button>
+          </form>
+        </div>
       </aside>
-      <div className="admin-content"><header className="admin-topbar"><div><span className="admin-kicker">Workspace</span><strong>Store operations</strong></div><div className="admin-user"><span>{user.firstName ?? user.email}</span></div></header>{children}</div>
+      <div className="admin-content">
+        <header className="admin-topbar">
+          <div>
+            <span className="admin-kicker">Workspace</span>
+            <strong>Store operations</strong>
+          </div>
+          <div className="admin-user">
+            <span>{user.firstName ?? user.email}</span>
+          </div>
+        </header>
+        {children}
+      </div>
     </div>
   );
 }

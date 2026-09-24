@@ -1,5 +1,5 @@
 {
-  "name": "ceylon-store",
+  "name": "xoxod33p-store",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -7,6 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
     "db:up": "docker compose up -d mongodb",
     "db:down": "docker compose stop mongodb",
     "db:logs": "docker compose logs -f mongodb",
@@ -36,6 +38,7 @@
     "@types/three": "^0.186.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.5",
+    "prettier": "^3.5.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.15",
     "typescript": "^5"

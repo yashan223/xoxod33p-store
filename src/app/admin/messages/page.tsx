@@ -16,7 +16,9 @@ export default async function AdminMessagesPage() {
         <div>
           <span className="admin-kicker">Customer conversations</span>
           <h1>Messages</h1>
-          <p>Review customer requests, questions, and payment follow-ups across every order chat.</p>
+          <p>
+            Review customer requests, questions, and payment follow-ups across every order chat.
+          </p>
         </div>
         <span className="admin-date">{threads.length} THREADS</span>
       </div>
@@ -27,15 +29,26 @@ export default async function AdminMessagesPage() {
             <span className="admin-kicker">Inbox</span>
             <h2>Order chats</h2>
           </div>
-          <span className="admin-panel-meta">{withUnread.length} with unread customer messages</span>
+          <span className="admin-panel-meta">
+            {withUnread.length} with unread customer messages
+          </span>
         </div>
 
         {threads.length === 0 ? (
-          <p className="admin-empty"><MessageCircle size={18} style={{ display: "inline", marginRight: 8, verticalAlign: -3 }} />No customer orders yet — threads appear here once orders are placed.</p>
+          <p className="admin-empty">
+            <MessageCircle
+              size={18}
+              style={{ display: "inline", marginRight: 8, verticalAlign: -3 }}
+            />
+            No customer orders yet — threads appear here once orders are placed.
+          </p>
         ) : (
           <div className="admin-threads">
             {threads.map((thread) => (
-              <article className={`admin-thread ${thread.unreadCount > 0 ? "unread" : ""}`} key={thread.orderId}>
+              <article
+                className={`admin-thread ${thread.unreadCount > 0 ? "unread" : ""}`}
+                key={thread.orderId}
+              >
                 <div className="admin-thread-main">
                   <span className="profile-order-id">{thread.orderId}</span>
                   <strong>{thread.email}</strong>
@@ -47,9 +60,19 @@ export default async function AdminMessagesPage() {
                 </div>
                 <div className="admin-thread-side">
                   <span className="admin-status">{thread.status.replace("_", " ")}</span>
-                  {thread.latestMessage && <small>{new Date(thread.latestMessage.createdAt).toLocaleDateString("en-LK")}</small>}
-                  {thread.unreadCount > 0 && <span className="admin-thread-badge">{thread.unreadCount > 9 ? "9+" : thread.unreadCount}</span>}
-                  <Link className="profile-order-link" href={`/admin/orders/${thread.orderId}`}>Open chat</Link>
+                  {thread.latestMessage && (
+                    <small>
+                      {new Date(thread.latestMessage.createdAt).toLocaleDateString("en-LK")}
+                    </small>
+                  )}
+                  {thread.unreadCount > 0 && (
+                    <span className="admin-thread-badge">
+                      {thread.unreadCount > 9 ? "9+" : thread.unreadCount}
+                    </span>
+                  )}
+                  <Link className="profile-order-link" href={`/admin/orders/${thread.orderId}`}>
+                    Open chat
+                  </Link>
                 </div>
               </article>
             ))}

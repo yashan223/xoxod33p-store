@@ -23,7 +23,9 @@ function loadCachedReadKeys() {
   try {
     const raw = window.localStorage.getItem(readStorageKey);
     const parsed = raw ? (JSON.parse(raw) as unknown) : [];
-    return new Set(Array.isArray(parsed) ? parsed.filter((key): key is string => typeof key === "string") : []);
+    return new Set(
+      Array.isArray(parsed) ? parsed.filter((key): key is string => typeof key === "string") : [],
+    );
   } catch {
     return new Set<string>();
   }
@@ -84,7 +86,9 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
         setLocalReadKeys(cached);
       }
       const result = (await response.json()) as { notifications?: Notification[] };
-      const incoming = (result.notifications ?? []).filter((item) => item && item.id && item.orderId);
+      const incoming = (result.notifications ?? []).filter(
+        (item) => item && item.id && item.orderId,
+      );
       const fresh = isFirstLoad.current
         ? []
         : incoming.filter((item) => {
@@ -95,7 +99,10 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
       if (fresh.length > 0) {
         setToasts((current) => {
           const existing = new Set(current.map(keyOf));
-          return [...fresh.filter((item) => !existing.has(keyOf(item))), ...current].slice(0, maxToasts);
+          return [...fresh.filter((item) => !existing.has(keyOf(item))), ...current].slice(
+            0,
+            maxToasts,
+          );
         });
       }
       setNotifications(incoming);
@@ -120,7 +127,10 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
 
   useEffect(() => {
     if (toasts.length === 0) return;
-    const timer = window.setTimeout(() => setToasts((current) => current.slice(1)), toastLifetimeMs);
+    const timer = window.setTimeout(
+      () => setToasts((current) => current.slice(1)),
+      toastLifetimeMs,
+    );
     return () => window.clearTimeout(timer);
   }, [toasts]);
 
@@ -137,7 +147,8 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
 
   const unreadCount = notifications.filter((item) => !isRead(item)).length;
 
-  const dismissToast = (notification: Notification) => setToasts((current) => current.filter((item) => item.id !== notification.id));
+  const dismissToast = (notification: Notification) =>
+    setToasts((current) => current.filter((item) => item.id !== notification.id));
 
   const closePanel = () => {
     setOpen(false);
@@ -151,11 +162,18 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
           <div className="side-notif-toasts" role="status" aria-live="polite">
             {toasts.map((toast) => (
               <div className="side-notif-toast" key={toast.id}>
-                <span className="side-notif-toast-icon"><MessageCircle size={14} /></span>
+                <span className="side-notif-toast-icon">
+                  <MessageCircle size={14} />
+                </span>
                 <div className="side-notif-toast-body">
                   <span className="side-notif-kicker">Order {toast.orderId}</span>
                   <p>{toast.body}</p>
-                  <small>{new Date(toast.createdAt).toLocaleTimeString("en-LK", { hour: "2-digit", minute: "2-digit" })}</small>
+                  <small>
+                    {new Date(toast.createdAt).toLocaleTimeString("en-LK", {
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </small>
                 </div>
                 <div className="side-notif-toast-actions">
                   <Link
@@ -167,7 +185,13 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
                   >
                     Open
                   </Link>
-                  <button type="button" aria-label="Dismiss notification" onClick={() => dismissToast(toast)}><X size={13} /></button>
+                  <button
+                    type="button"
+                    aria-label="Dismiss notification"
+                    onClick={() => dismissToast(toast)}
+                  >
+                    <X size={13} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -181,19 +205,39 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
           onClick={() => (open ? closePanel() : setOpen(true))}
         >
           {unreadCount > 0 ? <BellRing size={17} /> : <Bell size={17} />}
-          {unreadCount > 0 && <span className="side-notif-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>}
+          {unreadCount > 0 && (
+            <span className="side-notif-badge">{unreadCount > 9 ? "9+" : unreadCount}</span>
+          )}
         </button>
       </div>
       {open && (
         <div className="side-notif-layer">
-          <button className="side-notif-backdrop" type="button" aria-label="Close notifications" onClick={closePanel} />
-          <aside className="side-notif-drawer" role="dialog" aria-modal="true" aria-label="Message notifications">
+          <button
+            className="side-notif-backdrop"
+            type="button"
+            aria-label="Close notifications"
+            onClick={closePanel}
+          />
+          <aside
+            className="side-notif-drawer"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Message notifications"
+          >
             <header className="side-notif-drawer-header">
-              <div><span className="side-notif-kicker">Order chats</span><h2>Notifications</h2></div>
-              <button type="button" aria-label="Close notifications" onClick={closePanel}><X size={16} /></button>
+              <div>
+                <span className="side-notif-kicker">Order chats</span>
+                <h2>Notifications</h2>
+              </div>
+              <button type="button" aria-label="Close notifications" onClick={closePanel}>
+                <X size={16} />
+              </button>
             </header>
             {notifications.length === 0 ? (
-              <p className="side-notif-empty"><MessageCircle size={20} />No messages yet. Updates about your orders will show up here.</p>
+              <p className="side-notif-empty">
+                <MessageCircle size={20} />
+                No messages yet. Updates about your orders will show up here.
+              </p>
             ) : (
               <div className="side-notif-list">
                 {notifications.map((item) => (
@@ -214,7 +258,11 @@ export function MessageNotifications({ enabled }: { enabled: boolean }) {
               </div>
             )}
             <footer className="side-notif-drawer-footer">
-              <button type="button" onClick={() => markKeysRead(notifications.map(keyOf))} disabled={unreadCount === 0}>
+              <button
+                type="button"
+                onClick={() => markKeysRead(notifications.map(keyOf))}
+                disabled={unreadCount === 0}
+              >
                 <CheckCheck size={13} /> Mark all read
               </button>
             </footer>

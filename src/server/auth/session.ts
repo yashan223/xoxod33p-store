@@ -42,11 +42,19 @@ async function sessionsCollection() {
 export async function createSession(userId: string, rememberMe = false) {
   const token = randomBytes(32).toString("hex");
   const now = new Date();
-  const expiresAt = new Date(now.getTime() + (rememberMe ? sessionLifetimeMs : temporarySessionLifetimeMs));
+  const expiresAt = new Date(
+    now.getTime() + (rememberMe ? sessionLifetimeMs : temporarySessionLifetimeMs),
+  );
   const collection = await sessionsCollection();
   await collection.insertOne({ tokenHash: hashToken(token), userId, expiresAt, createdAt: now });
   const cookieStore = await cookies();
-  cookieStore.set(cookieName, token, { httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", ...(rememberMe ? { expires: expiresAt } : {}), path: "/" });
+  cookieStore.set(cookieName, token, {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    ...(rememberMe ? { expires: expiresAt } : {}),
+    path: "/",
+  });
 }
 
 export async function clearSession() {
@@ -63,13 +71,22 @@ export async function getCurrentSession(): Promise<{ user: AuthUser; rememberMe:
   const token = (await cookies()).get(cookieName)?.value;
   if (!token) return null;
   const collection = await sessionsCollection();
-  const session = await collection.findOne({ tokenHash: hashToken(token), expiresAt: { $gt: new Date() } });
+  const session = await collection.findOne({
+    tokenHash: hashToken(token),
+    expiresAt: { $gt: new Date() },
+  });
   if (!session) return null;
   const user = await findUserById(session.userId);
   if (!user || !user.emailVerified) return null;
   return {
-    user: { id: user.id, email: user.email, firstName: user.firstName, emailVerified: user.emailVerified },
-    rememberMe: session.expiresAt.getTime() - session.createdAt.getTime() > temporarySessionLifetimeMs,
+    user: {
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      emailVerified: user.emailVerified,
+    },
+    rememberMe:
+      session.expiresAt.getTime() - session.createdAt.getTime() > temporarySessionLifetimeMs,
   };
 }
 

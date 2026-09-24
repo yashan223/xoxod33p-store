@@ -6,8 +6,26 @@ type ProductDocument = Omit<Product, "createdAt" | "updatedAt"> & {
   updatedAt?: Date;
 };
 
+let indexesPromise: Promise<void> | undefined;
+
+function ensureIndexes() {
+  indexesPromise ??= (async () => {
+    const database = await getDatabase();
+    const collection = database.collection("products");
+    await Promise.all([
+      collection.createIndex({ id: 1 }, { unique: true }),
+      collection.createIndex({ active: 1, type: 1 }),
+    ]);
+  })().catch((error) => {
+    indexesPromise = undefined;
+    throw error;
+  });
+  return indexesPromise;
+}
+
 export async function getActiveProducts(): Promise<Product[]> {
   const database = await getDatabase();
+  await ensureIndexes();
   const records = await database
     .collection<ProductDocument>("products")
     .find({ active: true })
@@ -26,6 +44,7 @@ export async function getActiveProductsByIds(ids: string[]): Promise<Product[]> 
   if (ids.length === 0) return [];
 
   const database = await getDatabase();
+  await ensureIndexes();
   const records = await database
     .collection<ProductDocument>("products")
     .find({ id: { $in: ids }, active: true })

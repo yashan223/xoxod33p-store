@@ -12,8 +12,10 @@ export async function POST(request: Request, context: RouteContext) {
   const { id } = await context.params;
   const formData = await request.formData();
   const file = formData.get("file");
-  if (!(file instanceof File) || !file.type.startsWith("image/")) return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
-  if (file.size === 0 || file.size > 10 * 1024 * 1024) return NextResponse.json({ error: "Image must be between 1 byte and 10 MB." }, { status: 400 });
+  if (!(file instanceof File) || !file.type.startsWith("image/"))
+    return NextResponse.json({ error: "Choose an image file." }, { status: 400 });
+  if (file.size === 0 || file.size > 10 * 1024 * 1024)
+    return NextResponse.json({ error: "Image must be between 1 byte and 10 MB." }, { status: 400 });
 
   const database = await getDatabase();
   const product = await database.collection("products").findOne({ id });
@@ -22,8 +24,22 @@ export async function POST(request: Request, context: RouteContext) {
   try {
     const uploaded = await uploadProductFile(id, file);
     const imageUrl = `/api/products/${encodeURIComponent(id)}/image`;
-    await database.collection("products").updateOne({ id }, { $set: { imageUrl, imageKey: uploaded.key, imageContentType: uploaded.contentType, updatedAt: new Date() } });
-    console.info("Product image uploaded", { productId: id, fileName: uploaded.fileName, adminId: admin.id });
+    await database.collection("products").updateOne(
+      { id },
+      {
+        $set: {
+          imageUrl,
+          imageKey: uploaded.key,
+          imageContentType: uploaded.contentType,
+          updatedAt: new Date(),
+        },
+      },
+    );
+    console.info("Product image uploaded", {
+      productId: id,
+      fileName: uploaded.fileName,
+      adminId: admin.id,
+    });
     return NextResponse.json({ imageUrl });
   } catch (error) {
     console.error("Product image upload failed", error);

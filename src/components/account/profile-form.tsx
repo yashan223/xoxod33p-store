@@ -19,9 +19,12 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
     const response = await fetch("/api/profile", {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName: formData.get("firstName"), country: formData.get("country") }),
+      body: JSON.stringify({
+        firstName: formData.get("firstName"),
+        country: formData.get("country"),
+      }),
     });
-    const result = await response.json() as { user?: ProfileFormProps["user"]; error?: string };
+    const result = (await response.json()) as { user?: ProfileFormProps["user"]; error?: string };
     if (response.ok && result.user) {
       setUser(result.user);
       setStatus("Profile updated.");
@@ -31,5 +34,34 @@ export function ProfileForm({ user: initialUser }: ProfileFormProps) {
     setIsSaving(false);
   }
 
-  return <form className="profile-form" onSubmit={saveProfile}><label>Full name<Input name="firstName" defaultValue={user.firstName ?? ""} autoComplete="name" /></label><label>Email address<Input value={user.email} readOnly /></label><label>Country<select name="country" defaultValue={user.country ?? ""}><option value="">Select your country</option><option value="Sri Lanka">Sri Lanka</option><option value="India">India</option><option value="Pakistan">Pakistan</option><option value="Bangladesh">Bangladesh</option><option value="United Kingdom">United Kingdom</option><option value="United States">United States</option><option value="Australia">Australia</option><option value="Other">Other</option></select></label><Button type="submit" disabled={isSaving}>{isSaving ? "Saving..." : "Save profile"}</Button>{status && <p className="profile-form-status">{status}</p>}</form>;
+  return (
+    <form className="profile-form" onSubmit={saveProfile}>
+      <label>
+        Full name
+        <Input name="firstName" defaultValue={user.firstName ?? ""} autoComplete="name" />
+      </label>
+      <label>
+        Email address
+        <Input value={user.email} readOnly />
+      </label>
+      <label>
+        Country
+        <select name="country" defaultValue={user.country ?? ""}>
+          <option value="">Select your country</option>
+          <option value="Sri Lanka">Sri Lanka</option>
+          <option value="India">India</option>
+          <option value="Pakistan">Pakistan</option>
+          <option value="Bangladesh">Bangladesh</option>
+          <option value="United Kingdom">United Kingdom</option>
+          <option value="United States">United States</option>
+          <option value="Australia">Australia</option>
+          <option value="Other">Other</option>
+        </select>
+      </label>
+      <Button type="submit" disabled={isSaving}>
+        {isSaving ? "Saving..." : "Save profile"}
+      </Button>
+      {status && <p className="profile-form-status">{status}</p>}
+    </form>
+  );
 }
