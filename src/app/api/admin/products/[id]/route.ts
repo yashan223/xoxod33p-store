@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import { requireAdmin } from "@/server/auth/admin";
 import { getDatabase } from "@/server/db/mongodb";
+import { recordAuditLog } from "@/server/admin/audit";
 import { productTypes, type ProductType } from "@/types/product";
 
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { id } = await context.params;
   const body = (await request.json()) as Record<string, unknown>;
   const allowed = [
@@ -40,6 +41,18 @@ export async function PATCH(request: Request, context: RouteContext) {
     if (!Number.isInteger(update.price) || Number(update.price) < 0)
       return NextResponse.json({ error: "Enter a valid price." }, { status: 400 });
   }
+  if ("tag" in update) {
+    update.tag = typeof update.tag === "string" ? update.tag.trim() : "";
+  }
+  if ("available" in update) {
+    update.available = Boolean(update.available);
+  }
+  if ("active" in update) {
+    update.active = Boolean(update.active);
+  }
+  if ("accent" in update && typeof update.accent === "string") {
+    update.accent = update.accent.trim() || "slate";
+  }
   const result = await (
     await getDatabase()
   )
@@ -47,14 +60,35 @@ export async function PATCH(request: Request, context: RouteContext) {
     .updateOne({ id }, { $set: { ...update, updatedAt: new Date() } });
   if (result.matchedCount === 0)
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
+
+  await recordAuditLog({
+    action: "PRODUCT_UPDATED",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "product",
+    targetId: id,
+    targetName: typeof update.name === "string" ? update.name : id,
+    details: `Updated fields: ${Object.keys(update).join(", ")}`,
+  });
+
   return NextResponse.json({ ok: true });
 }
 
 export async function DELETE(_request: Request, context: RouteContext) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const { id } = await context.params;
   const result = await (await getDatabase()).collection("products").deleteOne({ id });
   if (result.deletedCount === 0)
     return NextResponse.json({ error: "Product not found." }, { status: 404 });
+
+  await recordAuditLog({
+    action: "PRODUCT_DELETED",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "product",
+    targetId: id,
+    details: `Deleted product ID ${id}`,
+  });
+
   return NextResponse.json({ ok: true });
 }

@@ -50,13 +50,6 @@ export default async function DashboardItemsPage() {
           </form>
         </header>
         <div className="dashboard-items-content">
-          <div className="dashboard-heading">
-            <div>
-              <span className="section-kicker">Store catalog</span>
-              <h1>Find your setup.</h1>
-              <p>Request a server, mod, or service. An operator will review it before payment.</p>
-            </div>
-          </div>
           <section className="dashboard-catalog-grid">
             {products.map((product) => (
               <article className="dashboard-catalog-card" key={product.id}>

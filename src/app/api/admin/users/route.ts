@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { isConfiguredAdminEmail, requireAdmin } from "@/server/auth/admin";
 import { deleteUser, findUserById } from "@/server/auth/users";
+import { recordAuditLog } from "@/server/admin/audit";
 
 export async function DELETE(request: Request) {
   const admin = await requireAdmin();
@@ -25,5 +26,16 @@ export async function DELETE(request: Request) {
 
   const deleted = await deleteUser(userId);
   if (!deleted) return NextResponse.json({ error: "User not found." }, { status: 404 });
+
+  await recordAuditLog({
+    action: "USER_DELETED",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "user",
+    targetId: userId,
+    targetName: target.email,
+    details: `Deleted user ${target.email} (${target.firstName || "unnamed customer"})`,
+  });
+
   return NextResponse.json({ ok: true });
 }

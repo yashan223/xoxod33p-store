@@ -1,51 +1,148 @@
-import { Package, Server, ShoppingCart, Wrench, Cable } from "lucide-react";
-import { getAdminOverview } from "@/server/admin/overview";
+import Link from "next/link";
+import {
+  Package,
+  Server,
+  ShoppingCart,
+  Wrench,
+  Cable,
+  Users,
+  ShieldAlert,
+  ArrowUpRight,
+} from "lucide-react";
+import { getAdminOverview, getAdminProducts } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
+import { listAdminUsers } from "@/server/auth/users";
+import { listAuditLogs } from "@/server/admin/audit";
+import { ProductManager } from "@/components/admin/product-manager";
+import { UserManagement } from "@/components/admin/user-management";
+import { AuditLogViewer } from "@/components/admin/audit-log-viewer";
+
+export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [overview, orders] = await Promise.all([getAdminOverview(), listOrders()]);
+  const [overview, orders, products, users, auditLogs] = await Promise.all([
+    getAdminOverview(),
+    listOrders(),
+    getAdminProducts(),
+    listAdminUsers(),
+    listAuditLogs(25),
+  ]);
+
+  const usersView = users.map((user) => ({
+    ...user,
+    createdAt: user.createdAt.toISOString(),
+    updatedAt: user.updatedAt.toISOString(),
+  }));
 
   return (
     <main className="admin-page">
-      <section className="admin-stat-grid">
-        <div className="admin-stat">
-          <Package size={18} />
+      <div className="admin-page-heading">
+        <div>
+          <span className="admin-kicker">Store Operations</span>
+          <h1>Admin Dashboard</h1>
+          <p>
+            Manage items and catalog, monitor users, inspect audit security logs, and control live
+            orders.
+          </p>
+        </div>
+        <div className="admin-heading-actions">
+          <Link className="admin-store-link" href="/admin/products">
+            Catalog <span>↗</span>
+          </Link>
+          <Link className="admin-store-link" href="/admin/users">
+            Users <span>↗</span>
+          </Link>
+          <Link className="admin-store-link" href="/admin/audit">
+            Audit log <span>↗</span>
+          </Link>
+        </div>
+      </div>
+
+      {/* 6-Card Stats Grid */}
+      <section className="admin-stat-grid admin-stat-grid-6">
+        <Link href="/admin/users" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <Users size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
+          <span>Registered users</span>
+          <strong>{overview.totalUsers}</strong>
+          <small>Verified & pending accounts</small>
+        </Link>
+        <Link href="/admin/products" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <Package size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
           <span>Active products</span>
           <strong>{overview.activeProducts}</strong>
-          <small>{overview.totalProducts} total records</small>
-        </div>
-        <div className="admin-stat">
-          <Server size={18} />
+          <small>{overview.totalProducts} total catalog items</small>
+        </Link>
+        <Link href="/admin/products?type=server" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <Server size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
           <span>Server plans</span>
           <strong>{overview.serverProducts}</strong>
           <small>Available to customers</small>
-        </div>
-        <div className="admin-stat">
-          <Wrench size={18} />
+        </Link>
+        <Link href="/admin/products?type=mod" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <Wrench size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
           <span>Mods & tools</span>
           <strong>{overview.modProducts}</strong>
           <small>Downloadable catalog items</small>
-        </div>
-        <div className="admin-stat">
-          <Cable size={18} />
+        </Link>
+        <Link href="/admin/products?type=service" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <Cable size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
           <span>Services</span>
           <strong>{overview.serviceProducts}</strong>
           <small>Remote setup work</small>
-        </div>
-        <div className="admin-stat">
-          <ShoppingCart size={18} />
+        </Link>
+        <Link href="/admin/orders" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <ShoppingCart size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
           <span>Orders</span>
           <strong>{overview.totalOrders}</strong>
           <small>All-time records</small>
-        </div>
+        </Link>
       </section>
+
+      {/* 1. Catalog items management on Dashboard with Add Item & Edit Item */}
+      <ProductManager
+        products={products}
+        title="Store items & catalog"
+        kicker="Direct item management"
+        isDashboardView={true}
+      />
+
+      {/* 2. User Management on Dashboard */}
+      <UserManagement users={usersView} isDashboardView={true} />
+
+      {/* 3. System Audit Log on Dashboard */}
+      <AuditLogViewer logs={auditLogs} isDashboardView={true} />
+
+      {/* 4. Recent Customer Orders */}
       <section className="admin-panel admin-activity-panel">
         <div className="admin-panel-header">
           <div>
             <span className="admin-kicker">Customer activity</span>
-            <h2>Recent activity</h2>
+            <h2>Recent orders</h2>
           </div>
-          <span className="admin-panel-meta">{orders.length} total orders</span>
+          <div className="product-panel-actions">
+            <span className="admin-panel-meta">{orders.length} total orders</span>
+            <Link className="admin-store-link" href="/admin/orders">
+              View all orders <span>↗</span>
+            </Link>
+          </div>
         </div>
         <div className="admin-table-wrap">
           <table className="admin-table">
@@ -62,9 +159,9 @@ export default async function AdminDashboardPage() {
               {orders.slice(0, 8).map((order) => (
                 <tr key={order.id}>
                   <td>
-                    <a className="admin-order-link" href={`/admin/orders/${order.id}`}>
+                    <Link className="admin-order-link" href={`/admin/orders/${order.id}`}>
                       {order.id}
-                    </a>
+                    </Link>
                     <small>
                       {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
                     </small>

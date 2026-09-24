@@ -50,13 +50,6 @@ export default async function DashboardMessagesPage() {
           </form>
         </header>
         <div className="dashboard-messages-content">
-          <div className="dashboard-heading">
-            <div>
-              <span className="section-kicker">Order chats</span>
-              <h1>Messages</h1>
-              <p>Stay connected with operators about your requests, payment, and delivery.</p>
-            </div>
-          </div>
           <section className="dashboard-panel dashboard-messages-panel">
             <div className="dashboard-panel-heading">
               <div>

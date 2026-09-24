@@ -1,9 +1,10 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Trash2, Search, UserCheck, UserX, Shield } from "lucide-react";
+import Link from "next/link";
+import { useState, useMemo } from "react";
 
-type AdminUserView = {
+export type AdminUserView = {
   id: string;
   email: string;
   firstName?: string;
@@ -13,9 +14,21 @@ type AdminUserView = {
   updatedAt: string;
 };
 
-export function UserManagement({ users: initialUsers }: { users: AdminUserView[] }) {
+type UserManagementProps = {
+  users: AdminUserView[];
+  isDashboardView?: boolean;
+};
+
+export function UserManagement({
+  users: initialUsers,
+  isDashboardView = false,
+}: UserManagementProps) {
   const [users, setUsers] = useState(initialUsers);
   const [pendingId, setPendingId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [filterVerification, setFilterVerification] = useState<"all" | "verified" | "pending">(
+    "all",
+  );
 
   async function handleDelete(user: AdminUserView) {
     if (!window.confirm(`Delete ${user.email}? This also signs the user out of every device.`))
@@ -39,34 +52,102 @@ export function UserManagement({ users: initialUsers }: { users: AdminUserView[]
     }
   }
 
+  const counts = useMemo(() => {
+    return {
+      all: users.length,
+      verified: users.filter((u) => u.emailVerified).length,
+      pending: users.filter((u) => !u.emailVerified).length,
+    };
+  }, [users]);
+
+  const filteredUsers = useMemo(() => {
+    return users.filter((user) => {
+      if (filterVerification === "verified" && !user.emailVerified) return false;
+      if (filterVerification === "pending" && user.emailVerified) return false;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesEmail = user.email.toLowerCase().includes(query);
+        const matchesName = user.firstName?.toLowerCase().includes(query) ?? false;
+        const matchesCountry = user.country?.toLowerCase().includes(query) ?? false;
+        if (!matchesEmail && !matchesName && !matchesCountry) return false;
+      }
+      return true;
+    });
+  }, [users, filterVerification, searchQuery]);
+
   return (
-    <section className="admin-panel">
+    <section className="admin-panel user-management-panel">
       <div className="admin-panel-header">
         <div>
-          <span className="admin-kicker">Accounts</span>
-          <h2>Registered users</h2>
+          <span className="admin-kicker">Accounts & access</span>
+          <h2>User management</h2>
         </div>
-        <span className="admin-panel-meta">MongoDB / users</span>
+        <div className="product-panel-actions">
+          <span className="admin-panel-meta">{users.length} registered accounts</span>
+          {isDashboardView && (
+            <Link className="admin-store-link" href="/admin/users">
+              Full user list <span>↗</span>
+            </Link>
+          )}
+        </div>
       </div>
+
+      {/* Toolbar */}
+      <div className="admin-catalog-toolbar">
+        <div className="admin-catalog-tabs">
+          <button
+            type="button"
+            className={`admin-tab-btn ${filterVerification === "all" ? "active" : ""}`}
+            onClick={() => setFilterVerification("all")}
+          >
+            All users <span>({counts.all})</span>
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${filterVerification === "verified" ? "active" : ""}`}
+            onClick={() => setFilterVerification("verified")}
+          >
+            <UserCheck size={12} /> Verified <span>({counts.verified})</span>
+          </button>
+          <button
+            type="button"
+            className={`admin-tab-btn ${filterVerification === "pending" ? "active" : ""}`}
+            onClick={() => setFilterVerification("pending")}
+          >
+            <UserX size={12} /> Pending <span>({counts.pending})</span>
+          </button>
+        </div>
+        <div className="admin-catalog-search">
+          <Search size={14} className="admin-search-icon" />
+          <input
+            type="search"
+            placeholder="Search email, name, country..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="admin-search-input"
+          />
+        </div>
+      </div>
+
       <div className="admin-table-wrap">
         <table className="admin-table">
           <thead>
             <tr>
-              <th>User</th>
+              <th>Customer</th>
               <th>Country</th>
               <th>Verification</th>
-              <th>Joined</th>
+              <th>Registered</th>
               <th aria-label="Actions" />
             </tr>
           </thead>
           <tbody>
-            {users.map((user) => (
+            {filteredUsers.slice(0, isDashboardView ? 8 : 50).map((user) => (
               <tr key={user.id}>
                 <td>
-                  <strong>{user.firstName || "Unnamed customer"}</strong>
+                  <strong>{user.firstName || "Customer"}</strong>
                   <small>{user.email}</small>
                 </td>
-                <td>{user.country || "-"}</td>
+                <td>{user.country || "LK"}</td>
                 <td>
                   <span className={user.emailVerified ? "admin-status active" : "admin-status"}>
                     {user.emailVerified ? "Verified" : "Pending"}
@@ -89,7 +170,9 @@ export function UserManagement({ users: initialUsers }: { users: AdminUserView[]
             ))}
           </tbody>
         </table>
-        {users.length === 0 && <p className="admin-empty">No customer accounts yet.</p>}
+        {filteredUsers.length === 0 && (
+          <p className="admin-empty">No registered customer accounts found.</p>
+        )}
       </div>
     </section>
   );

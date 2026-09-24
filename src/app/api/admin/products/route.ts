@@ -32,11 +32,14 @@ function productInput(body: Record<string, unknown>) {
     accent: typeof body.accent === "string" && body.accent.trim() ? body.accent.trim() : "slate",
     active: body.active !== false,
     available: body.available !== false,
+    tag: typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : undefined,
   };
 }
 
+import { recordAuditLog } from "@/server/admin/audit";
+
 export async function POST(request: Request) {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const input = productInput((await request.json()) as Record<string, unknown>);
   if (!input)
     return NextResponse.json(
@@ -50,6 +53,17 @@ export async function POST(request: Request) {
     .replace(/^-|-$/g, "")}-${Date.now().toString(36)}`;
   const product: ProductRecord = { id, ...input, createdAt: now, updatedAt: now };
   await (await getDatabase()).collection("products").insertOne(product);
+
+  await recordAuditLog({
+    action: "PRODUCT_CREATED",
+    actorId: admin.id,
+    actorEmail: admin.email,
+    targetType: "product",
+    targetId: id,
+    targetName: input.name,
+    details: `Created new ${input.type} item "${input.name}" at Rs. ${input.price}`,
+  });
+
   return NextResponse.json(
     { product: { ...product, createdAt: now.toISOString(), updatedAt: now.toISOString() } },
     { status: 201 },

@@ -7,15 +7,24 @@ export async function getAdminOverview() {
   const database = await getDatabase();
   const products = database.collection<ProductDocument>("products");
   const orders = database.collection("orders");
-  const [totalProducts, activeProducts, serverProducts, modProducts, serviceProducts, totalOrders] =
-    await Promise.all([
-      products.countDocuments(),
-      products.countDocuments({ active: true }),
-      products.countDocuments({ type: "server", active: true }),
-      products.countDocuments({ type: "mod", active: true }),
-      products.countDocuments({ type: "service", active: true }),
-      orders.countDocuments(),
-    ]);
+  const users = database.collection("users");
+  const [
+    totalProducts,
+    activeProducts,
+    serverProducts,
+    modProducts,
+    serviceProducts,
+    totalOrders,
+    totalUsers,
+  ] = await Promise.all([
+    products.countDocuments(),
+    products.countDocuments({ active: true }),
+    products.countDocuments({ type: "server", active: true }),
+    products.countDocuments({ type: "mod", active: true }),
+    products.countDocuments({ type: "service", active: true }),
+    orders.countDocuments(),
+    users.countDocuments(),
+  ]);
 
   return {
     totalProducts,
@@ -24,6 +33,7 @@ export async function getAdminOverview() {
     modProducts,
     serviceProducts,
     totalOrders,
+    totalUsers,
   };
 }
 

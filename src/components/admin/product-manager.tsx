@@ -1,13 +1,35 @@
 "use client";
 
 import Image from "next/image";
-import { X } from "lucide-react";
-import { useState } from "react";
+import Link from "next/link";
+import {
+  X,
+  Plus,
+  Pencil,
+  Eye,
+  EyeOff,
+  Trash2,
+  Tag,
+  Check,
+  Upload,
+  FileText,
+  Search,
+  ExternalLink,
+  CheckCircle2,
+  AlertCircle,
+} from "lucide-react";
+import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { Product, ProductType } from "@/types/product";
 
-type ProductManagerProps = { products: Product[] };
+type ProductManagerProps = {
+  products: Product[];
+  title?: string;
+  kicker?: string;
+  isDashboardView?: boolean;
+};
+
 type Draft = {
   name: string;
   type: ProductType;
@@ -16,7 +38,10 @@ type Draft = {
   price: string;
   accent: string;
   active: boolean;
+  available: boolean;
+  tag: string;
 };
+
 const blankDraft: Draft = {
   name: "",
   type: "server",
@@ -25,251 +50,650 @@ const blankDraft: Draft = {
   price: "",
   accent: "slate",
   active: true,
+  available: true,
+  tag: "",
 };
 
-export function ProductManager({ products: initialProducts }: ProductManagerProps) {
+const ACCENT_OPTIONS = [
+  { value: "slate", label: "Slate", color: "#64748b", bg: "#f1f5f9" },
+  { value: "blue", label: "Blue", color: "#3b82f6", bg: "#eff6ff" },
+  { value: "indigo", label: "Indigo", color: "#6366f1", bg: "#eef2ff" },
+  { value: "cyan", label: "Cyan", color: "#06b6d4", bg: "#ecfeff" },
+  { value: "emerald", label: "Emerald", color: "#10b981", bg: "#ecfdf5" },
+  { value: "violet", label: "Violet", color: "#8b5cf6", bg: "#f5f3ff" },
+];
+
+export function ProductManager({
+  products: initialProducts,
+  title = "Products",
+  kicker = "Live catalog",
+  isDashboardView = false,
+}: ProductManagerProps) {
   const [products, setProducts] = useState(initialProducts);
   const [draft, setDraft] = useState<Draft>(blankDraft);
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
   const [isEditorOpen, setIsEditorOpen] = useState(false);
   const [status, setStatus] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [downloadFile, setDownloadFile] = useState<File | null>(null);
+  const [filterType, setFilterType] = useState<string>("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
-  function changeDraft(key: keyof Draft, value: string | boolean) {
+  function changeDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
   }
+
   function openCreate() {
-    setEditingId(null);
+    setEditingProduct(null);
     setDraft(blankDraft);
     setImageFile(null);
+    setDownloadFile(null);
     setStatus("");
     setIsEditorOpen(true);
   }
+
   function editProduct(product: Product) {
-    setEditingId(product.id);
+    setEditingProduct(product);
     setDraft({
       name: product.name,
       type: product.type,
       description: product.description,
       meta: product.meta,
       price: String(product.price),
-      accent: product.accent,
-      active: product.active,
+      accent: product.accent || "slate",
+      active: product.active !== false,
+      available: product.available !== false,
+      tag: product.tag ?? "",
     });
     setImageFile(null);
+    setDownloadFile(null);
     setStatus("");
     setIsEditorOpen(true);
   }
+
   function closeEditor() {
     setIsEditorOpen(false);
-    setEditingId(null);
+    setEditingProduct(null);
     setDraft(blankDraft);
     setImageFile(null);
+    setDownloadFile(null);
     setStatus("");
+    setIsSaving(false);
   }
 
   async function saveProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const response = await fetch(
-      editingId ? `/api/admin/products/${editingId}` : "/api/admin/products",
-      {
-        method: editingId ? "PATCH" : "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...draft, price: Number(draft.price) }),
-      },
-    );
-    const result = (await response.json()) as { product?: Product; error?: string };
-    if (!response.ok) return setStatus(result.error ?? "Unable to save product.");
-    const productId = editingId ?? result.product?.id;
-    let imageUrl = editingId
-      ? products.find((product) => product.id === editingId)?.imageUrl
-      : result.product?.imageUrl;
-    if (imageFile && productId) {
-      const imageForm = new FormData();
-      imageForm.append("file", imageFile);
-      const imageResponse = await fetch(`/api/admin/products/${productId}/image`, {
-        method: "POST",
-        body: imageForm,
-      });
-      const imageResult = (await imageResponse.json()) as { imageUrl?: string; error?: string };
-      if (!imageResponse.ok || !imageResult.imageUrl)
-        return setStatus(imageResult.error ?? "Unable to upload product image.");
-      imageUrl = imageResult.imageUrl;
-    }
-    if (editingId)
-      setProducts((current) =>
-        current.map((product) =>
-          product.id === editingId
-            ? { ...product, ...draft, price: Number(draft.price), imageUrl }
-            : product,
-        ),
+    setIsSaving(true);
+    setStatus("");
+
+    try {
+      const payload = {
+        name: draft.name.trim(),
+        type: draft.type,
+        description: draft.description.trim(),
+        meta: draft.meta.trim(),
+        price: Number(draft.price),
+        accent: draft.accent,
+        active: draft.active,
+        available: draft.available,
+        tag: draft.tag.trim(),
+      };
+
+      const response = await fetch(
+        editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products",
+        {
+          method: editingProduct ? "PATCH" : "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        },
       );
-    else if (result.product)
-      setProducts((current) => [{ ...result.product!, imageUrl }, ...current]);
-    closeEditor();
+      const result = (await response.json()) as { product?: Product; error?: string };
+      if (!response.ok) {
+        setStatus(result.error ?? "Unable to save product.");
+        setIsSaving(false);
+        return;
+      }
+
+      const productId = editingProduct ? editingProduct.id : result.product?.id;
+      if (!productId) {
+        setStatus("Product saved, but record ID was missing.");
+        setIsSaving(false);
+        return;
+      }
+
+      let imageUrl = editingProduct ? editingProduct.imageUrl : result.product?.imageUrl;
+      let downloadName = editingProduct
+        ? editingProduct.downloadName
+        : result.product?.downloadName;
+
+      // Upload image if selected
+      if (imageFile) {
+        const imageForm = new FormData();
+        imageForm.append("file", imageFile);
+        const imageResponse = await fetch(`/api/admin/products/${productId}/image`, {
+          method: "POST",
+          body: imageForm,
+        });
+        const imageResult = (await imageResponse.json()) as { imageUrl?: string; error?: string };
+        if (imageResponse.ok && imageResult.imageUrl) {
+          imageUrl = imageResult.imageUrl;
+        } else if (!imageResponse.ok) {
+          setStatus(imageResult.error ?? "Product saved, but image upload failed.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      // Upload downloadable file if selected
+      if (downloadFile) {
+        const fileForm = new FormData();
+        fileForm.append("file", downloadFile);
+        const fileResponse = await fetch(`/api/admin/products/${productId}/file`, {
+          method: "POST",
+          body: fileForm,
+        });
+        const fileResult = (await fileResponse.json()) as { fileName?: string; error?: string };
+        if (fileResponse.ok && fileResult.fileName) {
+          downloadName = fileResult.fileName;
+        } else if (!fileResponse.ok) {
+          setStatus(fileResult.error ?? "Product saved, but file attachment failed.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      if (editingProduct) {
+        setProducts((current) =>
+          current.map((item) =>
+            item.id === editingProduct.id
+              ? {
+                  ...item,
+                  ...payload,
+                  imageUrl,
+                  downloadName,
+                  updatedAt: new Date().toISOString(),
+                }
+              : item,
+          ),
+        );
+      } else if (result.product) {
+        setProducts((current) => [
+          {
+            ...result.product!,
+            ...payload,
+            imageUrl,
+            downloadName,
+          },
+          ...current,
+        ]);
+      }
+
+      closeEditor();
+    } catch {
+      setStatus("A network error occurred while saving the item.");
+    } finally {
+      setIsSaving(false);
+    }
   }
 
   async function toggleProduct(product: Product) {
+    const nextActive = !product.active;
     await fetch(`/api/admin/products/${product.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ ...product, active: !product.active, price: product.price }),
+      body: JSON.stringify({ active: nextActive }),
     });
     setProducts((current) =>
-      current.map((item) => (item.id === product.id ? { ...item, active: !item.active } : item)),
+      current.map((item) => (item.id === product.id ? { ...item, active: nextActive } : item)),
     );
   }
-  async function deleteProduct(product: Product) {
-    if (!window.confirm(`Delete ${product.name}?`)) return;
-    const response = await fetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
-    if (response.ok) setProducts((current) => current.filter((item) => item.id !== product.id));
+
+  async function toggleAvailability(product: Product) {
+    const nextAvailable = product.available === false;
+    await fetch(`/api/admin/products/${product.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ available: nextAvailable }),
+    });
+    setProducts((current) =>
+      current.map((item) =>
+        item.id === product.id ? { ...item, available: nextAvailable } : item,
+      ),
+    );
   }
+
+  async function deleteProduct(product: Product) {
+    if (!window.confirm(`Are you sure you want to delete "${product.name}"?`)) return;
+    const response = await fetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
+    if (response.ok) {
+      setProducts((current) => current.filter((item) => item.id !== product.id));
+    } else {
+      alert("Unable to delete product.");
+    }
+  }
+
+  const counts = useMemo(() => {
+    return {
+      all: products.length,
+      server: products.filter((p) => p.type === "server").length,
+      mod: products.filter((p) => p.type === "mod").length,
+      service: products.filter((p) => p.type === "service").length,
+    };
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      if (filterType !== "all" && product.type !== filterType) return false;
+      if (searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        const matchesName = product.name.toLowerCase().includes(query);
+        const matchesMeta = product.meta.toLowerCase().includes(query);
+        const matchesTag = product.tag?.toLowerCase().includes(query);
+        const matchesDesc = product.description.toLowerCase().includes(query);
+        if (!matchesName && !matchesMeta && !matchesTag && !matchesDesc) return false;
+      }
+      return true;
+    });
+  }, [products, filterType, searchQuery]);
 
   return (
     <div className="product-manager">
       <section className="admin-panel product-cards-panel">
         <div className="admin-panel-header">
           <div>
-            <span className="admin-kicker">Live catalog</span>
-            <h2>Products</h2>
+            <span className="admin-kicker">{kicker}</span>
+            <h2>{title}</h2>
           </div>
           <div className="product-panel-actions">
-            <span className="admin-panel-meta">{products.length} total</span>
+            <span className="admin-panel-meta">{products.length} total items</span>
+            {isDashboardView && (
+              <Link className="admin-store-link" href="/admin/products">
+                Full catalog <span>↗</span>
+              </Link>
+            )}
             <Button size="sm" type="button" onClick={openCreate}>
-              Add product
+              <Plus size={14} style={{ marginRight: 4 }} />
+              Add item
             </Button>
           </div>
         </div>
-        {products.length === 0 ? (
+
+        {/* Filter and Search Toolbar */}
+        <div className="admin-catalog-toolbar">
+          <div className="admin-catalog-tabs">
+            <button
+              type="button"
+              className={`admin-tab-btn ${filterType === "all" ? "active" : ""}`}
+              onClick={() => setFilterType("all")}
+            >
+              All <span>({counts.all})</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${filterType === "server" ? "active" : ""}`}
+              onClick={() => setFilterType("server")}
+            >
+              Servers <span>({counts.server})</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${filterType === "mod" ? "active" : ""}`}
+              onClick={() => setFilterType("mod")}
+            >
+              Mods & tools <span>({counts.mod})</span>
+            </button>
+            <button
+              type="button"
+              className={`admin-tab-btn ${filterType === "service" ? "active" : ""}`}
+              onClick={() => setFilterType("service")}
+            >
+              Services <span>({counts.service})</span>
+            </button>
+          </div>
+          <div className="admin-catalog-search">
+            <Search size={14} className="admin-search-icon" />
+            <input
+              type="search"
+              placeholder="Search items, specs, tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="admin-search-input"
+            />
+          </div>
+        </div>
+
+        {filteredProducts.length === 0 ? (
           <div className="admin-empty">
-            <p>No products yet.</p>
-            <Button size="sm" type="button" onClick={openCreate}>
-              Add first product
-            </Button>
+            <p>
+              {products.length === 0
+                ? "No products found in the catalog."
+                : "No items match your filter criteria."}
+            </p>
+            {products.length === 0 && (
+              <Button size="sm" type="button" onClick={openCreate}>
+                <Plus size={14} style={{ marginRight: 4 }} />
+                Add first item
+              </Button>
+            )}
           </div>
         ) : (
           <div className="admin-product-grid">
-            {products.map((product) => (
-              <article className="admin-product-card" key={product.id}>
-                <div className={`admin-product-art product-art-${product.accent}`}>
-                  {product.imageUrl ? (
-                    <Image src={product.imageUrl} alt="" width={400} height={240} />
-                  ) : (
-                    <span>{product.type.toUpperCase()}</span>
-                  )}
-                </div>
-                <div className="admin-product-card-body">
-                  <div>
-                    <span className="admin-kicker">{product.active ? "Active" : "Hidden"}</span>
-                    <h3>{product.name}</h3>
-                    <p>{product.description}</p>
+            {filteredProducts.map((product) => {
+              const isAvailable = product.available !== false;
+              return (
+                <article className="admin-product-card" key={product.id}>
+                  <div className={`admin-product-art product-art-${product.accent || "slate"}`}>
+                    {product.imageUrl ? (
+                      <Image
+                        src={product.imageUrl}
+                        alt={product.name}
+                        width={400}
+                        height={240}
+                        style={{ objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span>{product.type.toUpperCase()}</span>
+                    )}
+
+                    {/* Top badging over art */}
+                    <div className="admin-card-art-badges">
+                      {product.tag && (
+                        <span className="admin-badge admin-badge-tag">{product.tag}</span>
+                      )}
+                      <span
+                        className={`admin-badge ${product.active ? "admin-badge-active" : "admin-badge-draft"}`}
+                      >
+                        {product.active ? "Live" : "Draft"}
+                      </span>
+                    </div>
                   </div>
-                  <strong>Rs. {product.price.toLocaleString("en-LK")}</strong>
-                  <div className="admin-product-actions">
-                    <button type="button" onClick={() => editProduct(product)}>
-                      Edit
-                    </button>
-                    <button type="button" onClick={() => void toggleProduct(product)}>
-                      {product.active ? "Hide" : "Show"}
-                    </button>
-                    <button
-                      className="danger"
-                      type="button"
-                      onClick={() => void deleteProduct(product)}
-                    >
-                      Delete
-                    </button>
+
+                  <div className="admin-product-card-body">
+                    <div>
+                      <div className="admin-card-header-row">
+                        <span className="admin-kicker">{product.type}</span>
+                        <button
+                          type="button"
+                          className={`admin-availability-pill ${isAvailable ? "available" : "unavailable"}`}
+                          onClick={() => void toggleAvailability(product)}
+                          title="Click to toggle availability"
+                        >
+                          {isAvailable ? "Available" : "Unavailable"}
+                        </button>
+                      </div>
+                      <h3>{product.name}</h3>
+                      <p>{product.description}</p>
+                    </div>
+
+                    <div className="admin-card-specs-row">
+                      <span className="admin-card-meta">{product.meta}</span>
+                      {product.downloadName && (
+                        <span className="admin-card-download-indicator" title="Downloadable file attached">
+                          <FileText size={11} /> {product.downloadName}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="admin-card-price-row">
+                      <strong>Rs. {product.price.toLocaleString("en-LK")}</strong>
+                      <span className="admin-card-id">{product.id}</span>
+                    </div>
+
+                    {/* Action buttons */}
+                    <div className="admin-product-actions">
+                      <button
+                        type="button"
+                        className="admin-action-link edit"
+                        onClick={() => editProduct(product)}
+                        title="Edit this item"
+                      >
+                        <Pencil size={12} />
+                        Edit
+                      </button>
+                      <button
+                        type="button"
+                        className="admin-action-link"
+                        onClick={() => void toggleProduct(product)}
+                        title={product.active ? "Hide from store" : "Publish to store"}
+                      >
+                        {product.active ? (
+                          <>
+                            <EyeOff size={12} />
+                            Hide
+                          </>
+                        ) : (
+                          <>
+                            <Eye size={12} />
+                            Show
+                          </>
+                        )}
+                      </button>
+                      <button
+                        className="admin-action-link danger"
+                        type="button"
+                        onClick={() => void deleteProduct(product)}
+                        title="Delete this item"
+                      >
+                        <Trash2 size={12} />
+                        Delete
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </article>
-            ))}
+                </article>
+              );
+            })}
           </div>
         )}
       </section>
+
+      {/* Add / Edit Item Modal */}
       {isEditorOpen && (
         <div
           className="product-modal"
           role="dialog"
           aria-modal="true"
-          aria-label={editingId ? "Edit product" : "Add product"}
+          aria-label={editingProduct ? "Edit item" : "Add item"}
         >
-          <div className="product-modal-header">
-            <div>
-              <span className="admin-kicker">Catalog tools</span>
-              <h2>{editingId ? "Edit product" : "Add product"}</h2>
-            </div>
-            <button
-              className="product-modal-close"
-              type="button"
-              onClick={closeEditor}
-              aria-label="Close product editor"
-            >
-              <X size={20} />
-            </button>
-          </div>
-          <form className="product-editor-form" onSubmit={saveProduct}>
-            <label>
-              Name
-              <Input
-                value={draft.name}
-                onChange={(event) => changeDraft("name", event.target.value)}
-                required
-              />
-            </label>
-            <label>
-              Type
-              <select
-                value={draft.type}
-                onChange={(event) => changeDraft("type", event.target.value)}
+          <div className="product-modal-container">
+            <div className="product-modal-header">
+              <div>
+                <span className="admin-kicker">
+                  {editingProduct ? `Editing item: ${editingProduct.id}` : "Catalog operations"}
+                </span>
+                <h2>{editingProduct ? "Edit item details" : "Add new item"}</h2>
+              </div>
+              <button
+                className="product-modal-close"
+                type="button"
+                onClick={closeEditor}
+                aria-label="Close product editor"
               >
-                <option value="server">Server</option>
-                <option value="mod">Mod / tool</option>
-                <option value="service">Service</option>
-              </select>
-            </label>
-            <label>
-              Price (Rs.)
-              <Input
-                type="number"
-                min="0"
-                value={draft.price}
-                onChange={(event) => changeDraft("price", event.target.value)}
-                required
-              />
-            </label>
-            <label>
-              Specification
-              <Input
-                value={draft.meta}
-                onChange={(event) => changeDraft("meta", event.target.value)}
-                placeholder="20 slots / v1.0 / setup"
-                required
-              />
-            </label>
-            <label>
-              Product image
-              <input
-                accept="image/*"
-                type="file"
-                onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
-              />
-            </label>
-            <label className="product-editor-wide">
-              Description
-              <textarea
-                value={draft.description}
-                onChange={(event) => changeDraft("description", event.target.value)}
-                required
-              />
-            </label>
-            <div className="product-modal-actions">
-              <Button variant="outline" type="button" onClick={closeEditor}>
-                Cancel
-              </Button>
-              <Button type="submit">{editingId ? "Save changes" : "Add product"}</Button>
+                <X size={20} />
+              </button>
             </div>
-            {status && <p className="product-editor-status">{status}</p>}
-          </form>
+
+            <form className="product-editor-form" onSubmit={saveProduct}>
+              {/* Row 1: Core Details */}
+              <label>
+                Name *
+                <Input
+                  value={draft.name}
+                  onChange={(event) => changeDraft("name", event.target.value)}
+                  placeholder="e.g. Pro Match Server 20-Slot"
+                  required
+                />
+              </label>
+
+              <label>
+                Type *
+                <select
+                  value={draft.type}
+                  onChange={(event) => changeDraft("type", event.target.value as ProductType)}
+                >
+                  <option value="server">Server Plan</option>
+                  <option value="mod">Mod / Tool</option>
+                  <option value="service">Remote Service</option>
+                </select>
+              </label>
+
+              <label>
+                Price (Rs.) *
+                <Input
+                  type="number"
+                  min="0"
+                  step="1"
+                  value={draft.price}
+                  onChange={(event) => changeDraft("price", event.target.value)}
+                  placeholder="e.g. 3500"
+                  required
+                />
+              </label>
+
+              {/* Row 2: Specification, Tag, and Color Theme */}
+              <label>
+                Specification / Meta *
+                <Input
+                  value={draft.meta}
+                  onChange={(event) => changeDraft("meta", event.target.value)}
+                  placeholder="e.g. 20 slots / v1.7 / Instant setup"
+                  required
+                />
+              </label>
+
+              <label>
+                Promotional Tag / Badge
+                <Input
+                  value={draft.tag}
+                  onChange={(event) => changeDraft("tag", event.target.value)}
+                  placeholder="e.g. POPULAR, FEATURED, 20% OFF"
+                />
+              </label>
+
+              <label>
+                Visual Accent Theme
+                <div className="admin-accent-selector">
+                  {ACCENT_OPTIONS.map((opt) => (
+                    <button
+                      key={opt.value}
+                      type="button"
+                      className={`admin-accent-chip ${draft.accent === opt.value ? "selected" : ""}`}
+                      onClick={() => changeDraft("accent", opt.value)}
+                      title={opt.label}
+                    >
+                      <span
+                        className="admin-accent-dot"
+                        style={{ backgroundColor: opt.color }}
+                      />
+                      <span>{opt.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </label>
+
+              {/* Row 3: Visibility & Availability Options */}
+              <div className="product-editor-toggle-row">
+                <div className="admin-toggle-card">
+                  <label className="admin-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={draft.available}
+                      onChange={(e) => changeDraft("available", e.target.checked)}
+                    />
+                    <div>
+                      <strong>Available for Order</strong>
+                      <small>If unchecked, customers see &quot;Unavailable&quot; and cannot order.</small>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="admin-toggle-card">
+                  <label className="admin-checkbox-label">
+                    <input
+                      type="checkbox"
+                      checked={draft.active}
+                      onChange={(e) => changeDraft("active", e.target.checked)}
+                    />
+                    <div>
+                      <strong>Active (Published)</strong>
+                      <small>If unchecked, item is hidden from the public store catalog.</small>
+                    </div>
+                  </label>
+                </div>
+              </div>
+
+              {/* Row 4: Media & Files */}
+              <label className="product-editor-file-label">
+                Product Image
+                <div className="admin-file-upload-box">
+                  {editingProduct?.imageUrl && !imageFile && (
+                    <div className="admin-current-preview">
+                      <Image
+                        src={editingProduct.imageUrl}
+                        alt="Current preview"
+                        width={60}
+                        height={40}
+                        style={{ objectFit: "cover", borderRadius: 4 }}
+                      />
+                      <span>Current image set</span>
+                    </div>
+                  )}
+                  <input
+                    accept="image/*"
+                    type="file"
+                    onChange={(event) => setImageFile(event.target.files?.[0] ?? null)}
+                  />
+                  <small>Upload PNG, JPG, or WebP (up to 10MB)</small>
+                </div>
+              </label>
+
+              <label className="product-editor-file-label">
+                Downloadable File (Digital Delivery)
+                <div className="admin-file-upload-box">
+                  {editingProduct?.downloadName && !downloadFile && (
+                    <div className="admin-current-file">
+                      <FileText size={16} />
+                      <span>{editingProduct.downloadName}</span>
+                    </div>
+                  )}
+                  <input
+                    type="file"
+                    onChange={(event) => setDownloadFile(event.target.files?.[0] ?? null)}
+                  />
+                  <small>For mods/configs/tools (ZIP, RAR, 7Z up to 500MB)</small>
+                </div>
+              </label>
+
+              {/* Row 5: Description */}
+              <label className="product-editor-wide">
+                Description *
+                <textarea
+                  value={draft.description}
+                  onChange={(event) => changeDraft("description", event.target.value)}
+                  placeholder="Detailed breakdown of features, setup requirements, delivery details..."
+                  rows={4}
+                  required
+                />
+              </label>
+
+              {/* Status and Action Buttons */}
+              {status && (
+                <div className="product-editor-status-banner">
+                  <AlertCircle size={16} />
+                  <span>{status}</span>
+                </div>
+              )}
+
+              <div className="product-modal-actions">
+                <Button variant="outline" type="button" onClick={closeEditor} disabled={isSaving}>
+                  Cancel
+                </Button>
+                <Button type="submit" disabled={isSaving}>
+                  {isSaving ? "Saving..." : editingProduct ? "Save changes" : "Add item"}
+                </Button>
+              </div>
+            </form>
+          </div>
         </div>
       )}
     </div>

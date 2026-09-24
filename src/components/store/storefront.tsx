@@ -352,8 +352,8 @@ export function Storefront({
             style={{ height: "auto" }}
           />
           <p>
-            Build your ideal COD4 experience with reliable servers, battle-tested mods, and support
-            that keeps your community in the game.
+            Build your ideal COD4 experience with reliable servers, mods, and support that keeps
+            your community in the game.
           </p>
           <a className="intro-enter" href="#catalog">
             Explore the store <ArrowRight size={16} />
