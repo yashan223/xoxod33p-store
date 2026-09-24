@@ -13,18 +13,9 @@ export const siteKeywords = [
   "private COD4 server",
 ];
 
-const configuredSiteUrl =
-  process.env.NEXT_PUBLIC_APP_URL ??
-  process.env.APP_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+import { getAppUrl } from "./env";
 
-export const siteUrl = (() => {
-  try {
-    return new URL(configuredSiteUrl).origin;
-  } catch {
-    return "http://localhost:3000";
-  }
-})();
+export const siteUrl = getAppUrl();
 
 export function absoluteUrl(path = "/") {
   try {

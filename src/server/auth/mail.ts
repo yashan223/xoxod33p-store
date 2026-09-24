@@ -1,4 +1,6 @@
-const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+import { getAppUrl } from "@/lib/env";
+
+const appUrl = getAppUrl();
 
 // Resend returns the useful part (e.g. an unverified sender domain) in the body, not the status.
 async function resendFailure(response: Response) {

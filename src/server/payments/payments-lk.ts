@@ -1,4 +1,5 @@
 import { PaymentsLk } from "@payments-lk/node";
+import { getAppUrl } from "@/lib/env";
 
 let client: PaymentsLk | undefined;
 
@@ -14,6 +15,6 @@ export function getPaymentsLkClient() {
 }
 
 export function getPaymentsReturnUrl(path: string) {
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
   return new URL(path, appUrl).toString();
 }

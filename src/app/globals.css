@@ -2947,6 +2947,20 @@ body {
   color: #737373;
   padding: 28px 0;
   position: relative;
+  transition: color 0.15s ease;
+}
+.site-nav a::after {
+  background: #171717;
+  bottom: 21px;
+  content: "";
+  height: 2px;
+  left: 0;
+  opacity: 0;
+  position: absolute;
+  right: 0;
+  transform: scaleX(0);
+  transform-origin: center;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.15s ease;
 }
 .site-nav a:hover {
   background: transparent;
@@ -2958,13 +2972,8 @@ body {
   color: #171717;
 }
 .site-nav a.active::after {
-  background: #171717;
-  bottom: 21px;
-  content: "";
-  height: 2px;
-  left: 0;
-  position: absolute;
-  right: 0;
+  opacity: 1;
+  transform: scaleX(1);
 }
 .header-actions {
   min-width: 220px;

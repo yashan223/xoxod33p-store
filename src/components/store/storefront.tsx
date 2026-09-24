@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -83,14 +83,31 @@ export function Storefront({
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
-  const [activeSection, setActiveSection] = useState("catalog");
+  const [activeSection, setActiveSection] = useState(() => {
+    if (typeof window !== "undefined" && window.location.hash) {
+      const hash = window.location.hash.replace("#", "");
+      if (["home", "catalog", "faq"].includes(hash)) return hash;
+    }
+    return "home";
+  });
   const [checkoutState, setCheckoutState] = useState<"idle" | "loading" | "error">("idle");
   const [checkoutError, setCheckoutError] = useState("");
   const [isCartHydrated, setIsCartHydrated] = useState(false);
 
+  const isProgrammaticScrollRef = useRef(false);
+  const programmaticTimeoutRef = useRef<number | null>(null);
+
   const scrollTo = (id: string, newActiveSection?: string) => {
     const el = document.getElementById(id);
     if (el) {
+      isProgrammaticScrollRef.current = true;
+      if (programmaticTimeoutRef.current) {
+        window.clearTimeout(programmaticTimeoutRef.current);
+      }
+      programmaticTimeoutRef.current = window.setTimeout(() => {
+        isProgrammaticScrollRef.current = false;
+      }, 850);
+
       el.scrollIntoView({ behavior: "smooth", block: "start" });
     }
     if (newActiveSection) {
@@ -100,46 +117,50 @@ export function Storefront({
 
   useEffect(() => {
     let ticking = false;
+
     const updateScrollState = () => {
       if (!ticking) {
         window.requestAnimationFrame(() => {
-          const next = window.scrollY > 24;
-          setIsScrolled((prev) => (prev === next ? prev : next));
+          const scrollY = window.scrollY;
+          setIsScrolled(scrollY > 24);
+
+          if (!isProgrammaticScrollRef.current) {
+            const catalogEl = document.getElementById("catalog");
+            const faqEl = document.getElementById("faq");
+
+            const scrollBottom = window.innerHeight + scrollY;
+            const docHeight = document.documentElement.scrollHeight;
+
+            const threshold = 180;
+
+            if (scrollBottom >= docHeight - 70) {
+              setActiveSection("faq");
+            } else if (faqEl && faqEl.getBoundingClientRect().top <= threshold) {
+              setActiveSection("faq");
+            } else if (catalogEl && catalogEl.getBoundingClientRect().top <= threshold) {
+              setActiveSection("catalog");
+            } else {
+              setActiveSection("home");
+            }
+          }
+
           ticking = false;
         });
         ticking = true;
       }
     };
+
     updateScrollState();
     window.addEventListener("scroll", updateScrollState, { passive: true });
-    return () => window.removeEventListener("scroll", updateScrollState);
-  }, []);
+    window.addEventListener("resize", updateScrollState, { passive: true });
 
-  useEffect(() => {
-    const sectionIds = ["home", "catalog", "faq", "contact"];
-    const sections = sectionIds
-      .map((id) => document.getElementById(id))
-      .filter((section): section is HTMLElement => Boolean(section));
-
-    if (sections.length === 0) return;
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length > 0) {
-          visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
-          const activeId = visible[0].target.id;
-          setActiveSection((current) => (current === activeId ? current : activeId));
-        }
-      },
-      {
-        rootMargin: "-20% 0px -40% 0px",
-        threshold: [0.1, 0.4, 0.7],
-      },
-    );
-
-    sections.forEach((section) => observer.observe(section));
-    return () => observer.disconnect();
+    return () => {
+      window.removeEventListener("scroll", updateScrollState);
+      window.removeEventListener("resize", updateScrollState);
+      if (programmaticTimeoutRef.current) {
+        window.clearTimeout(programmaticTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {

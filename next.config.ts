@@ -8,14 +8,85 @@ const securityHeaders = [
   { key: "Permissions-Policy", value: "camera=(), microphone=(), geolocation=()" },
 ];
 
+const corsOriginEnv =
+  process.env.CORS_ALLOWED_ORIGIN ||
+  process.env.APP_URL ||
+  process.env.NEXT_PUBLIC_APP_URL ||
+  "http://localhost:4000";
+
+function extractHostname(raw: string): string | null {
+  try {
+    const url = new URL(raw.includes("://") ? raw : `https://${raw}`);
+    return url.hostname;
+  } catch {
+    return null;
+  }
+}
+
+function escapeRegex(str: string): string {
+  return str.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+const corsHostname = extractHostname(corsOriginEnv);
+const allowedDevOrigins = corsHostname
+  ? Array.from(new Set([corsHostname, `*.${corsHostname}`]))
+  : [];
+
+const corsHeaders = (origin: string) => [
+  { key: "Access-Control-Allow-Credentials", value: "true" },
+  { key: "Access-Control-Allow-Origin", value: origin },
+  { key: "Access-Control-Allow-Methods", value: "GET,OPTIONS,PATCH,DELETE,POST,PUT" },
+  {
+    key: "Access-Control-Allow-Headers",
+    value:
+      "X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization",
+  },
+  { key: "Access-Control-Max-Age", value: "86400" },
+];
+
 const nextConfig: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
+  allowedDevOrigins,
   async headers() {
+    const originRegex = corsHostname
+      ? `(?<origin>https?:\\/\\/${escapeRegex(corsHostname)}(?::\\d+)?)`
+      : "(?<origin>https?:\\/\\/[^/]+)";
+
+    const defaultOrigin = (() => {
+      try {
+        return new URL(corsOriginEnv).origin;
+      } catch {
+        return corsOriginEnv;
+      }
+    })();
+
     return [
       {
         source: "/:path*",
         headers: securityHeaders,
+      },
+      {
+        source: "/api/:path*",
+        has: [
+          {
+            type: "header",
+            key: "origin",
+            value: originRegex,
+          },
+        ],
+        headers: corsHeaders(":origin"),
+      },
+      {
+        source: "/api/:path*",
+        missing: [
+          {
+            type: "header",
+            key: "origin",
+            value: ".*",
+          },
+        ],
+        headers: corsHeaders(defaultOrigin),
       },
     ];
   },

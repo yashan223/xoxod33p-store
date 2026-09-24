@@ -3,6 +3,7 @@ import { getDatabase } from "@/server/db/mongodb";
 import { sendServerRenewalReminderEmail } from "@/server/auth/mail";
 import { recordAuditLog } from "@/server/admin/audit";
 import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/payments-lk";
+import { getAppUrl } from "@/lib/env";
 
 export type ServerSubscriptionStatus = "active" | "expiring_soon" | "expired" | "cancelled";
 
@@ -291,7 +292,7 @@ export async function checkAndSendServerReminders(): Promise<ReminderCheckResult
   let expiredMarked = 0;
   const details: ReminderCheckResult["details"] = [];
 
-  const appUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const appUrl = getAppUrl();
 
   for (const sub of subscriptions) {
     const timing = calculateSubscriptionTiming(sub, now);
