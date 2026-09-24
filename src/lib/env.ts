@@ -5,7 +5,7 @@
  */
 
 export function getAppUrl(): string {
-  const envUrl = process.env.APP_URL || process.env.NEXT_PUBLIC_APP_URL;
+  const envUrl = process.env.NEXT_PUBLIC_APP_URL;
   if (envUrl) {
     try {
       return new URL(envUrl).origin;

@@ -10,7 +10,6 @@ const securityHeaders = [
 
 const corsOriginEnv =
   process.env.CORS_ALLOWED_ORIGIN ||
-  process.env.APP_URL ||
   process.env.NEXT_PUBLIC_APP_URL ||
   "http://localhost:4000";
 
