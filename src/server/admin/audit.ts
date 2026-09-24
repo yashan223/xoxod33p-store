@@ -10,6 +10,9 @@ export type AuditAction =
   | "USER_DELETED"
   | "ORDER_CREATED"
   | "ORDER_STATUS_UPDATED"
+  | "SERVER_SUBSCRIPTION_CREATED"
+  | "SERVER_SUBSCRIPTION_RENEWED"
+  | "SERVER_REMINDER_SENT"
   | "ADMIN_LOGIN"
   | "SYSTEM_EVENT";
 
@@ -18,7 +21,7 @@ export type AuditLogEntry = {
   action: AuditAction;
   actorId?: string;
   actorEmail?: string;
-  targetType: "product" | "user" | "order" | "system";
+  targetType: "product" | "user" | "order" | "system" | "server";
   targetId?: string;
   targetName?: string;
   details?: string;
@@ -34,7 +37,7 @@ export async function recordAuditLog(entry: {
   action: AuditAction;
   actorId?: string;
   actorEmail?: string;
-  targetType: "product" | "user" | "order" | "system";
+  targetType: "product" | "user" | "order" | "system" | "server";
   targetId?: string;
   targetName?: string;
   details?: string;

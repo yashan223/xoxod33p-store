@@ -166,6 +166,31 @@ export async function markOrderPaid(orderId: string, paymentId: string, amountCe
     details: paymentId,
     createdAt: now,
   });
+
+  // Activate or extend monthly server subscriptions for any server items
+  const serverItems = order.items.filter((item) => item.type === "server");
+  if (serverItems.length > 0) {
+    try {
+      const { activateOrExtendServerSubscription } = await import(
+        "@/server/subscriptions/servers"
+      );
+      for (const item of serverItems) {
+        await activateOrExtendServerSubscription({
+          orderId,
+          userId: order.userId,
+          userEmail: order.email,
+          productId: item.productId,
+          serverName: item.name,
+          monthlyPrice: item.unitPrice,
+          paymentId,
+          subscriptionId: (order as { subscriptionId?: string }).subscriptionId,
+        });
+      }
+    } catch (subErr) {
+      console.error("Failed to activate server subscription on payment", subErr);
+    }
+  }
+
   return true;
 }
 

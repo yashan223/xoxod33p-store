@@ -32,6 +32,8 @@ export default async function ResetPasswordPage({
             className="auth-logo"
             width={220}
             height={52}
+            priority
+            style={{ height: "auto" }}
           />
         </div>
         <div>

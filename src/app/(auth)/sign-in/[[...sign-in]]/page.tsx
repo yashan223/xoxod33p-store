@@ -27,6 +27,8 @@ export default function SignInPage() {
             className="auth-logo"
             width={220}
             height={52}
+            priority
+            style={{ height: "auto" }}
           />
         </div>
         <div>

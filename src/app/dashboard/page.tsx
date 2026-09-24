@@ -10,12 +10,21 @@ import {
 } from "lucide-react";
 import { requireUser } from "@/server/auth/session";
 import { listOrdersForUser } from "@/server/orders/orders";
+import {
+  listSubscriptionsForUser,
+  syncExistingPaidServers,
+} from "@/server/subscriptions/servers";
+import { ServerSubscriptionsCard } from "@/components/dashboard/server-subscriptions-card";
 
 export const dynamic = "force-dynamic";
 
 export default async function DashboardPage() {
   const user = await requireUser("/dashboard");
-  const orders = await listOrdersForUser(user.id);
+  await syncExistingPaidServers().catch(() => {});
+  const [orders, subscriptions] = await Promise.all([
+    listOrdersForUser(user.id),
+    listSubscriptionsForUser(user.id),
+  ]);
 
   const openOrders = orders.filter(
     (order) => !["completed", "cancelled"].includes(order.status),
@@ -96,6 +105,10 @@ export default async function DashboardPage() {
             <small>Ready for delivery</small>
           </div>
         </section>
+
+        {/* Active monthly game servers with Day 25 renewal reminders */}
+        <ServerSubscriptionsCard subscriptions={subscriptions} />
+
         <section className="dashboard-panel dashboard-items-panel">
           <div className="dashboard-panel-heading">
             <div>

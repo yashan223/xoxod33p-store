@@ -1,15 +1,27 @@
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/admin";
 import { listOrders } from "@/server/orders/orders";
+import {
+  listAllServerSubscriptions,
+  syncExistingPaidServers,
+} from "@/server/subscriptions/servers";
+import { ServerSubscriptionManager } from "@/components/admin/server-subscription-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
-  const orders = await listOrders();
+  await syncExistingPaidServers().catch(() => {});
+  const [orders, subscriptions] = await Promise.all([
+    listOrders(),
+    listAllServerSubscriptions(),
+  ]);
+
   return (
     <main className="admin-page">
-      <section className="admin-panel order-table-panel">
+      <ServerSubscriptionManager subscriptions={subscriptions} />
+
+      <section className="admin-panel order-table-panel" style={{ marginTop: 24 }}>
         <div className="admin-panel-header">
           <div>
             <span className="admin-kicker">Fulfillment queue</span>

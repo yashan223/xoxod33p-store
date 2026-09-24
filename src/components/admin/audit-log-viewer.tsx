@@ -12,6 +12,7 @@ import {
   Terminal,
   Clock,
   ArrowUpRight,
+  Server,
 } from "lucide-react";
 import type { AuditLogEntry, AuditAction } from "@/server/admin/audit";
 
@@ -61,6 +62,13 @@ export function AuditLogViewer({ logs: initialLogs, isDashboardView = false }: A
       return (
         <span className="admin-audit-badge order">
           <ShoppingCart size={11} /> {action.replace("ORDER_", "")}
+        </span>
+      );
+    }
+    if (action.startsWith("SERVER_")) {
+      return (
+        <span className="admin-audit-badge order" style={{ background: "#eef2ff", color: "#4f46e5" }}>
+          <Server size={11} /> {action.replace("SERVER_", "")}
         </span>
       );
     }

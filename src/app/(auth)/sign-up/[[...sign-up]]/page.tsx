@@ -27,6 +27,8 @@ export default function SignUpPage() {
             className="auth-logo"
             width={220}
             height={52}
+            priority
+            style={{ height: "auto" }}
           />
         </div>
         <div>
