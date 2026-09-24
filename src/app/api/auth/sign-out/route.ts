@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { clearSession } from "@/server/auth/session";
+import { getRequestBaseUrl } from "@/lib/env";
 
 export async function POST(request: Request) {
   await clearSession();
-  return NextResponse.redirect(new URL("/", request.url), 303);
+  const baseUrl = getRequestBaseUrl(request);
+  return NextResponse.redirect(new URL("/", baseUrl), 303);
 }
