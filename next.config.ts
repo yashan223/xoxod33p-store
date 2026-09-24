@@ -52,6 +52,10 @@ const corsHeaders = (origin: string) => [
 const nextConfig: NextConfig = {
   devIndicators: false,
   poweredByHeader: false,
+  productionBrowserSourceMaps: false,
+  experimental: {
+    optimizePackageImports: ["three", "lucide-react"],
+  },
   allowedDevOrigins,
   async headers() {
     const originRegex = corsHostname
