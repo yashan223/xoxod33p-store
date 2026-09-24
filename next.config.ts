@@ -27,9 +27,15 @@ function escapeRegex(str: string): string {
 }
 
 const corsHostname = extractHostname(corsOriginEnv);
-const allowedDevOrigins = corsHostname
-  ? Array.from(new Set([corsHostname, `*.${corsHostname}`]))
-  : [];
+const realtimeOriginEnv = process.env.NEXT_PUBLIC_REALTIME_URL;
+const realtimeHostname = realtimeOriginEnv ? extractHostname(realtimeOriginEnv) : null;
+
+const allowedDevOrigins = Array.from(
+  new Set([
+    ...(corsHostname ? [corsHostname, `*.${corsHostname}`] : []),
+    ...(realtimeHostname ? [realtimeHostname, `*.${realtimeHostname}`] : []),
+  ]),
+);
 
 const corsHeaders = (origin: string) => [
   { key: "Access-Control-Allow-Credentials", value: "true" },

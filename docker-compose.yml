@@ -4,7 +4,10 @@ services:
     container_name: xoxod33p-store-mongodb
     restart: unless-stopped
     env_file:
-      - .env.local
+      - path: .env.local
+        required: false
+      - path: .env
+        required: false
     environment:
       MONGO_INITDB_ROOT_USERNAME: ${MONGO_ROOT_USERNAME:-xoxod33p_admin}
       MONGO_INITDB_ROOT_PASSWORD: ${MONGO_ROOT_PASSWORD:-change-me-local}

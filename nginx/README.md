@@ -1,49 +1,71 @@
-# Nginx Setup Guide for `store.xoxod33p.tech`
+# Production Deployment Guide (`/home/admin/xoxod33p-store`)
 
-This folder contains the production-ready reverse proxy configuration for the Next.js store.
+This directory contains the production configurations for running the store on your VPS at `/home/admin/xoxod33p-store`.
 
 ---
 
-## 1. Quick Installation (Ubuntu / Debian)
+## 1. Running the Next.js App on Port 4000
 
-### Step 1: Copy configuration to Nginx
+From `/home/admin/xoxod33p-store`, install dependencies and build:
 ```bash
-sudo cp nginx/store.xoxod33p.tech.conf /etc/nginx/sites-available/store.xoxod33p.tech.conf
+cd /home/admin/xoxod33p-store
+npm install
+npm run build
 ```
 
-### Step 2: Enable the site
+### Option A: Using PM2 (Recommended)
+```bash
+sudo npm install -g pm2
+pm2 start ecosystem.config.cjs
+pm2 save
+pm2 startup
+```
+
+### Option B: Using Systemd
+```bash
+sudo cp deploy/xoxod33p-store.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now xoxod33p-store
+```
+
+---
+
+## 2. Nginx Setup
+
+### Step 1: Copy virtual host files to Nginx
+```bash
+sudo cp /home/admin/xoxod33p-store/nginx/store.xoxod33p.tech.conf /etc/nginx/sites-available/
+sudo cp /home/admin/xoxod33p-store/nginx/storerealtime.xoxod33p.tech.conf /etc/nginx/sites-available/
+```
+
+### Step 2: Enable both sites
 ```bash
 sudo ln -s /etc/nginx/sites-available/store.xoxod33p.tech.conf /etc/nginx/sites-enabled/
+sudo ln -s /etc/nginx/sites-available/storerealtime.xoxod33p.tech.conf /etc/nginx/sites-enabled/
 ```
 
-### Step 3: Obtain SSL Certificate with Certbot
-If you don't already have certificates generated for `store.xoxod33p.tech`:
-
-```bash
-sudo apt install certbot python3-certbot-nginx -y
-sudo certbot --nginx -d store.xoxod33p.tech
-```
-
-> **Note**: Certbot will automatically verify the domain and ensure the SSL paths match `/etc/letsencrypt/live/store.xoxod33p.tech/`.
-
-### Step 4: Test Nginx Configuration
+### Step 3: Test and reload Nginx
 ```bash
 sudo nginx -t
-```
-
-### Step 5: Reload Nginx
-```bash
 sudo systemctl reload nginx
 ```
 
 ---
 
-## 2. Configuration Highlights
+## 3. Enable Free SSL Certificates with Certbot (When Ready)
 
-- **Automatic HTTP to HTTPS redirect** (301 redirect).
-- **Next.js Upstream proxying** to `127.0.0.1:4000`.
-- **WebSocket Upgrade support** for real-time connections and Next.js Fast Refresh.
-- **Client Body Limit** set to `100M` to allow admin file and mod uploads.
-- **Immutable Static Asset Caching** for `/_next/static/` (1 year max-age).
-- **Gzip compression enabled** for JSON, JS, CSS, and SVG.
-- **Security Headers**: HSTS, X-Content-Type-Options, X-Frame-Options, Referrer-Policy.
+Once your DNS A records (`store.xoxod33p.tech` and `storerealtime.xoxod33p.tech`) point to your VPS IP:
+
+```bash
+sudo apt install certbot python3-certbot-nginx -y
+sudo certbot --nginx -d store.xoxod33p.tech -d storerealtime.xoxod33p.tech
+```
+
+---
+
+## 4. Port Mapping Summary
+
+| Subdomain | Target Local Port | Service |
+|---|---|---|
+| `store.xoxod33p.tech` | `127.0.0.1:4000` | Next.js Frontend & API |
+| `storerealtime.xoxod33p.tech` | `127.0.0.1:4001` | WebSocket / Realtime Server |
