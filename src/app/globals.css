@@ -1475,11 +1475,12 @@
   box-sizing: border-box;
 }
 html {
-  scroll-padding-top: 40px;
+  scroll-padding-top: 64px;
+  scroll-behavior: smooth;
 }
-@media (prefers-reduced-motion: no-preference) {
-  html:focus-within {
-    scroll-behavior: smooth;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
 }
 body {
@@ -1509,7 +1510,7 @@ input:focus-visible {
 }
 section[id],
 footer[id] {
-  scroll-margin-top: 40px;
+  scroll-margin-top: 64px;
 }
 .brand-intro {
   align-items: center;

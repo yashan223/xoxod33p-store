@@ -88,6 +88,16 @@ export function Storefront({
   const [checkoutError, setCheckoutError] = useState("");
   const [isCartHydrated, setIsCartHydrated] = useState(false);
 
+  const scrollTo = (id: string, newActiveSection?: string) => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+    if (newActiveSection) {
+      setActiveSection(newActiveSection);
+    }
+  };
+
   useEffect(() => {
     let ticking = false;
     const updateScrollState = () => {
@@ -249,7 +259,15 @@ export function Storefront({
   return (
     <main className="store-shell">
       <header className={cn("site-header", isScrolled && "site-header-scrolled")} id="storefront">
-        <a className="brand" href="#storefront" aria-label="xoxod33p store home">
+        <a
+          className="brand"
+          href="#home"
+          aria-label="xoxod33p store home"
+          onClick={(event) => {
+            event.preventDefault();
+            scrollTo("home", "home");
+          }}
+        >
           <Image
             src="/logo.png"
             alt="xoxod33p store"
@@ -263,8 +281,9 @@ export function Storefront({
           <a
             className={cn(activeSection === "home" && "active")}
             href="#home"
-            onClick={() => {
-              setActiveSection("home");
+            onClick={(event) => {
+              event.preventDefault();
+              scrollTo("home", "home");
               setIsMenuOpen(false);
             }}
           >
@@ -273,8 +292,9 @@ export function Storefront({
           <a
             className={cn(activeSection === "catalog" && "active")}
             href="#catalog"
-            onClick={() => {
-              setActiveSection("catalog");
+            onClick={(event) => {
+              event.preventDefault();
+              scrollTo("catalog", "catalog");
               setIsMenuOpen(false);
             }}
           >
@@ -283,8 +303,9 @@ export function Storefront({
           <a
             className={cn(activeSection === "faq" && "active")}
             href="#faq"
-            onClick={() => {
-              setActiveSection("faq");
+            onClick={(event) => {
+              event.preventDefault();
+              scrollTo("faq", "faq");
               setIsMenuOpen(false);
             }}
           >
@@ -355,7 +376,14 @@ export function Storefront({
             Build your ideal COD4 experience with reliable servers, mods, and support that keeps
             your community in the game.
           </p>
-          <a className="intro-enter" href="#catalog">
+          <a
+            className="intro-enter"
+            href="#catalog"
+            onClick={(event) => {
+              event.preventDefault();
+              scrollTo("catalog", "catalog");
+            }}
+          >
             Explore the store <ArrowRight size={16} />
           </a>
         </div>
@@ -534,14 +562,57 @@ export function Storefront({
         <div className="footer-links">
           <div>
             <span>Store</span>
-            <a href="#catalog">All products</a>
-            <a href="#catalog">Game servers</a>
-            <a href="#catalog">Mods & tools</a>
+            <a
+              href="#catalog"
+              onClick={(event) => {
+                event.preventDefault();
+                setCategory("all");
+                scrollTo("catalog", "catalog");
+              }}
+            >
+              All products
+            </a>
+            <a
+              href="#catalog"
+              onClick={(event) => {
+                event.preventDefault();
+                setCategory("server");
+                scrollTo("catalog", "catalog");
+              }}
+            >
+              Game servers
+            </a>
+            <a
+              href="#catalog"
+              onClick={(event) => {
+                event.preventDefault();
+                setCategory("mod");
+                scrollTo("catalog", "catalog");
+              }}
+            >
+              Mods & tools
+            </a>
           </div>
           <div>
             <span>Company</span>
-            <a href="#faq">FAQ</a>
-            <a href="#contact">Contact</a>
+            <a
+              href="#faq"
+              onClick={(event) => {
+                event.preventDefault();
+                scrollTo("faq", "faq");
+              }}
+            >
+              FAQ
+            </a>
+            <a
+              href="#contact"
+              onClick={(event) => {
+                event.preventDefault();
+                scrollTo("contact");
+              }}
+            >
+              Contact
+            </a>
           </div>
           <div>
             <span>Legal</span>
