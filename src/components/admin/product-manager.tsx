@@ -520,7 +520,6 @@ export function ProductManager({
                 <Input
                   value={draft.name}
                   onChange={(event) => changeDraft("name", event.target.value)}
-                  placeholder="e.g. Pro Match Server 20-Slot"
                   required
                 />
               </label>
@@ -545,7 +544,6 @@ export function ProductManager({
                   step="1"
                   value={draft.price}
                   onChange={(event) => changeDraft("price", event.target.value)}
-                  placeholder="e.g. 3500"
                   required
                 />
               </label>
@@ -556,7 +554,6 @@ export function ProductManager({
                 <Input
                   value={draft.meta}
                   onChange={(event) => changeDraft("meta", event.target.value)}
-                  placeholder="e.g. 20 slots / v1.7 / Instant setup"
                   required
                 />
               </label>
@@ -566,7 +563,6 @@ export function ProductManager({
                 <Input
                   value={draft.tag}
                   onChange={(event) => changeDraft("tag", event.target.value)}
-                  placeholder="e.g. POPULAR, FEATURED, 20% OFF"
                 />
               </label>
 
@@ -670,7 +666,6 @@ export function ProductManager({
                 <textarea
                   value={draft.description}
                   onChange={(event) => changeDraft("description", event.target.value)}
-                  placeholder="Detailed breakdown of features, setup requirements, delivery details..."
                   rows={4}
                   required
                 />
