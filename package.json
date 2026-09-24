@@ -7,6 +7,7 @@
     "build": "next build",
     "build:low-mem": "NODE_OPTIONS=--max-old-space-size=1536 next build",
     "start": "next start -p 4000",
+    "deploy": "bash deploy.sh",
     "lint": "eslint",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
