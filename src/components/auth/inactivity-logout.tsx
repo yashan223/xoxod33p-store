@@ -18,9 +18,18 @@ export function InactivityLogout({ enabled }: { enabled: boolean }) {
       router.push("/");
     };
 
+    let lastReset = 0;
     const resetTimer = () => {
       clearTimeout(timeoutId);
       timeoutId = setTimeout(() => void signOut(), inactivityLimitMs);
+    };
+
+    const onActivity = () => {
+      const now = Date.now();
+      if (now - lastReset > 5000) {
+        lastReset = now;
+        resetTimer();
+      }
     };
 
     const activityEvents: Array<keyof WindowEventMap> = [
@@ -31,13 +40,13 @@ export function InactivityLogout({ enabled }: { enabled: boolean }) {
       "scroll",
     ];
     activityEvents.forEach((eventName) =>
-      window.addEventListener(eventName, resetTimer, { passive: true }),
+      window.addEventListener(eventName, onActivity, { passive: true }),
     );
     resetTimer();
 
     return () => {
       clearTimeout(timeoutId);
-      activityEvents.forEach((eventName) => window.removeEventListener(eventName, resetTimer));
+      activityEvents.forEach((eventName) => window.removeEventListener(eventName, onActivity));
     };
   }, [enabled, router]);
 

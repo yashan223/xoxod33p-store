@@ -45,6 +45,8 @@ type ThreeState = {
   material: THREE.ShaderMaterial;
   composer?: EffectComposer;
   resizeObserver: ResizeObserver;
+  intersectionObserver?: IntersectionObserver;
+  onDocVisibility?: () => void;
   raf: number;
   quad: THREE.Mesh;
   timeOffset: number;
@@ -430,6 +432,8 @@ const PixelBlast = ({
       if (threeRef.current) {
         const t = threeRef.current;
         t.resizeObserver?.disconnect();
+        t.intersectionObserver?.disconnect();
+        if (t.onDocVisibility) document.removeEventListener("visibilitychange", t.onDocVisibility);
         cancelAnimationFrame(t.raf);
         t.quad?.geometry.dispose();
         t.material.dispose();
@@ -449,7 +453,7 @@ const PixelBlast = ({
       });
       renderer.domElement.style.width = "100%";
       renderer.domElement.style.height = "100%";
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25));
       container.appendChild(renderer.domElement);
       if (transparent) renderer.setClearAlpha(0);
       else renderer.setClearColor(0x000000, 1);
@@ -579,9 +583,10 @@ const PixelBlast = ({
         passive: true,
       });
       let raf = 0;
+      let isRunning = false;
       const animate = () => {
         if (autoPauseOffscreen && !visibilityRef.current.visible) {
-          raf = requestAnimationFrame(animate);
+          isRunning = false;
           return;
         }
         uniforms.uTime.value = timeOffset + clock.getElapsedTime() * speedRef.current;
@@ -602,8 +607,43 @@ const PixelBlast = ({
           composer.render();
         } else renderer.render(scene, camera);
         raf = requestAnimationFrame(animate);
+        if (threeRef.current) threeRef.current.raf = raf;
       };
-      raf = requestAnimationFrame(animate);
+
+      const startAnimation = () => {
+        if (!isRunning) {
+          isRunning = true;
+          raf = requestAnimationFrame(animate);
+          if (threeRef.current) threeRef.current.raf = raf;
+        }
+      };
+
+      const stopAnimation = () => {
+        isRunning = false;
+        cancelAnimationFrame(raf);
+      };
+
+      startAnimation();
+
+      const io = new IntersectionObserver(
+        ([entry]) => {
+          const isVisible = entry.isIntersecting;
+          visibilityRef.current.visible = isVisible;
+          if (autoPauseOffscreen) {
+            if (isVisible) startAnimation();
+            else stopAnimation();
+          }
+        },
+        { threshold: 0.02 },
+      );
+      io.observe(container);
+
+      const onDocVisibility = () => {
+        if (document.hidden) stopAnimation();
+        else if (visibilityRef.current.visible) startAnimation();
+      };
+      document.addEventListener("visibilitychange", onDocVisibility);
+
       threeRef.current = {
         renderer,
         scene,
@@ -613,6 +653,8 @@ const PixelBlast = ({
         clickIx: 0,
         uniforms,
         resizeObserver: ro,
+        intersectionObserver: io,
+        onDocVisibility,
         raf,
         quad,
         timeOffset,
@@ -650,6 +692,8 @@ const PixelBlast = ({
       if (!threeRef.current) return;
       const t = threeRef.current;
       t.resizeObserver?.disconnect();
+      t.intersectionObserver?.disconnect();
+      if (t.onDocVisibility) document.removeEventListener("visibilitychange", t.onDocVisibility);
       cancelAnimationFrame(t.raf);
       t.quad?.geometry.dispose();
       t.material.dispose();

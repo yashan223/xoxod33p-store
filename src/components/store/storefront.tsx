@@ -89,7 +89,17 @@ export function Storefront({
   const [isCartHydrated, setIsCartHydrated] = useState(false);
 
   useEffect(() => {
-    const updateScrollState = () => setIsScrolled(window.scrollY > 24);
+    let ticking = false;
+    const updateScrollState = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const next = window.scrollY > 24;
+          setIsScrolled((prev) => (prev === next ? prev : next));
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
     updateScrollState();
     window.addEventListener("scroll", updateScrollState, { passive: true });
     return () => window.removeEventListener("scroll", updateScrollState);
@@ -103,33 +113,23 @@ export function Storefront({
 
     if (sections.length === 0) return;
 
-    const updateActiveSection = () => {
-      const viewportCenter = window.innerHeight * 0.42;
-      let closestSection: HTMLElement | null = null;
-      let closestDistance = Number.POSITIVE_INFINITY;
-
-      for (const section of sections) {
-        const distance = Math.abs(section.getBoundingClientRect().top - viewportCenter);
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestSection = section;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length > 0) {
+          visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+          const activeId = visible[0].target.id;
+          setActiveSection((current) => (current === activeId ? current : activeId));
         }
-      }
+      },
+      {
+        rootMargin: "-20% 0px -40% 0px",
+        threshold: [0.1, 0.4, 0.7],
+      },
+    );
 
-      if (closestSection) {
-        setActiveSection((current) =>
-          current === closestSection!.id ? current : closestSection!.id,
-        );
-      }
-    };
-
-    updateActiveSection();
-    window.addEventListener("scroll", updateActiveSection, { passive: true });
-    window.addEventListener("resize", updateActiveSection);
-    return () => {
-      window.removeEventListener("scroll", updateActiveSection);
-      window.removeEventListener("resize", updateActiveSection);
-    };
+    sections.forEach((section) => observer.observe(section));
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -327,7 +327,7 @@ export function Storefront({
         <div className="intro-pixel-blast" aria-hidden="true">
           <PixelBlast
             variant="square"
-            pixelSize={3}
+            pixelSize={4}
             color="#000000"
             patternScale={2}
             patternDensity={1}
@@ -338,6 +338,7 @@ export function Storefront({
             speed={0.5}
             transparent
             edgeFade={0.5}
+            autoPauseOffscreen
           />
         </div>
         <div className="brand-intro-content">

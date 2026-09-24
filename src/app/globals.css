@@ -768,8 +768,12 @@
   box-sizing: border-box;
 }
 html {
-  scroll-behavior: smooth;
   scroll-padding-top: 40px;
+}
+@media (prefers-reduced-motion: no-preference) {
+  html:focus-within {
+    scroll-behavior: smooth;
+  }
 }
 body {
   font-family: var(--font-manrope), sans-serif;
@@ -813,7 +817,9 @@ footer[id] {
   opacity: 0.32;
   pointer-events: none;
   position: absolute;
-  transform: scale(1.06);
+  transform: scale(1.06) translateZ(0);
+  will-change: transform;
+  contain: strict;
   z-index: 0;
 }
 .brand-intro-content {
@@ -1982,9 +1988,12 @@ body {
   background: linear-gradient(135deg, #f7f7f7, #ffffff 48%, #eeeeee);
 }
 .site-header {
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(18px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+  transform: translateZ(0);
+  will-change: transform;
 }
 .brand-intro {
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.86), rgba(235, 235, 235, 0.72));
@@ -1993,12 +2002,12 @@ body {
   padding: 72px 70px;
 }
 .hero-panel {
-  background: rgba(255, 255, 255, 0.52);
+  background: rgba(255, 255, 255, 0.85);
   border-color: rgba(255, 255, 255, 0.9);
   box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.1),
+    0 16px 40px rgba(0, 0, 0, 0.06),
     inset 0 1px rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(20px);
+  contain: content;
 }
 .server-preview {
   background: rgba(255, 255, 255, 0.68);
@@ -2006,13 +2015,15 @@ body {
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.05);
 }
 .product-card {
-  background: rgba(255, 255, 255, 0.66);
-  border-color: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.045);
-  backdrop-filter: blur(12px);
+  background: rgba(255, 255, 255, 0.94);
+  border-color: rgba(230, 230, 230, 0.85);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+  contain: content;
+  content-visibility: auto;
+  contain-intrinsic-size: 0 380px;
 }
 .product-card:hover {
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 12px 28px rgba(0, 0, 0, 0.08);
   transform: translateY(-4px);
 }
 .product-art {
