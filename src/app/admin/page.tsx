@@ -6,59 +6,19 @@ import {
   Wrench,
   Cable,
   Users,
-  ShieldAlert,
   ArrowUpRight,
 } from "lucide-react";
-import { getAdminOverview, getAdminProducts } from "@/server/admin/overview";
+import { getAdminOverview } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
-import { listAdminUsers } from "@/server/auth/users";
-import { listAuditLogs } from "@/server/admin/audit";
-import { ProductManager } from "@/components/admin/product-manager";
-import { UserManagement } from "@/components/admin/user-management";
-import { AuditLogViewer } from "@/components/admin/audit-log-viewer";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const [overview, orders, products, users, auditLogs] = await Promise.all([
-    getAdminOverview(),
-    listOrders(),
-    getAdminProducts(),
-    listAdminUsers(),
-    listAuditLogs(25),
-  ]);
-
-  const usersView = users.map((user) => ({
-    ...user,
-    createdAt: user.createdAt.toISOString(),
-    updatedAt: user.updatedAt.toISOString(),
-  }));
+  const [overview, orders] = await Promise.all([getAdminOverview(), listOrders()]);
 
   return (
     <main className="admin-page">
-      <div className="admin-page-heading">
-        <div>
-          <span className="admin-kicker">Store Operations</span>
-          <h1>Admin Dashboard</h1>
-          <p>
-            Manage items and catalog, monitor users, inspect audit security logs, and control live
-            orders.
-          </p>
-        </div>
-        <div className="admin-heading-actions">
-          <Link className="admin-store-link" href="/admin/products">
-            Catalog <span>↗</span>
-          </Link>
-          <Link className="admin-store-link" href="/admin/users">
-            Users <span>↗</span>
-          </Link>
-          <Link className="admin-store-link" href="/admin/audit">
-            Audit log <span>↗</span>
-          </Link>
-        </div>
-      </div>
-
-      {/* 6-Card Stats Grid */}
+      {/* KPI Stats Grid */}
       <section className="admin-stat-grid admin-stat-grid-6">
         <Link href="/admin/users" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -67,7 +27,7 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Registered users</span>
           <strong>{overview.totalUsers}</strong>
-          <small>Verified & pending accounts</small>
+          <small>Customer accounts</small>
         </Link>
         <Link href="/admin/products" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -85,7 +45,7 @@ export default async function AdminDashboardPage() {
           </div>
           <span>Server plans</span>
           <strong>{overview.serverProducts}</strong>
-          <small>Available to customers</small>
+          <small>Hosted servers</small>
         </Link>
         <Link href="/admin/products?type=mod" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
@@ -116,21 +76,7 @@ export default async function AdminDashboardPage() {
         </Link>
       </section>
 
-      {/* 1. Catalog items management on Dashboard with Add Item & Edit Item */}
-      <ProductManager
-        products={products}
-        title="Store items & catalog"
-        kicker="Direct item management"
-        isDashboardView={true}
-      />
-
-      {/* 2. User Management on Dashboard */}
-      <UserManagement users={usersView} isDashboardView={true} />
-
-      {/* 3. System Audit Log on Dashboard */}
-      <AuditLogViewer logs={auditLogs} isDashboardView={true} />
-
-      {/* 4. Recent Customer Orders */}
+      {/* Recent Orders Activity Panel */}
       <section className="admin-panel admin-activity-panel">
         <div className="admin-panel-header">
           <div>
@@ -158,20 +104,22 @@ export default async function AdminDashboardPage() {
             <tbody>
               {orders.slice(0, 8).map((order) => (
                 <tr key={order.id}>
-                  <td>
-                    <Link className="admin-order-link" href={`/admin/orders/${order.id}`}>
-                      {order.id}
-                    </Link>
-                    <small>
-                      {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
-                    </small>
+                  <td data-label="Order">
+                    <div className="admin-cell-main">
+                      <Link className="admin-order-link" href={`/admin/orders/${order.id}`}>
+                        {order.id}
+                      </Link>
+                      <small>
+                        {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
+                      </small>
+                    </div>
                   </td>
-                  <td>{order.email}</td>
-                  <td>{order.paymentStatus}</td>
-                  <td>
+                  <td data-label="Customer">{order.email}</td>
+                  <td data-label="Payment">{order.paymentStatus}</td>
+                  <td data-label="Status">
                     <span className="admin-status active">{order.status.replace("_", " ")}</span>
                   </td>
-                  <td>{new Date(order.updatedAt).toLocaleDateString("en-LK")}</td>
+                  <td data-label="Updated">{new Date(order.updatedAt).toLocaleDateString("en-LK")}</td>
                 </tr>
               ))}
             </tbody>

@@ -9,15 +9,14 @@ export default async function AdminOrdersPage() {
   const orders = await listOrders();
   return (
     <main className="admin-page">
-      <div className="admin-page-heading">
-        <div>
-          <span className="admin-kicker">Fulfillment queue</span>
-          <h1>Customer orders</h1>
-          <p>Accept requests, share delivery details, and keep every conversation logged.</p>
-        </div>
-        <span className="admin-date">{orders.length} ORDERS</span>
-      </div>
       <section className="admin-panel order-table-panel">
+        <div className="admin-panel-header">
+          <div>
+            <span className="admin-kicker">Fulfillment queue</span>
+            <h2>Customer orders</h2>
+          </div>
+          <span className="admin-panel-meta">{orders.length} total orders</span>
+        </div>
         <div className="admin-table-wrap">
           <table className="admin-table">
             <thead>
@@ -32,20 +31,22 @@ export default async function AdminOrdersPage() {
             <tbody>
               {orders.map((order) => (
                 <tr key={order.id}>
-                  <td>
-                    <Link className="admin-order-link" href={`/admin/orders/${order.id}`}>
-                      {order.id}
-                    </Link>
-                    <small>
-                      {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
-                    </small>
+                  <td data-label="Order">
+                    <div className="admin-cell-main">
+                      <Link className="admin-order-link" href={`/admin/orders/${order.id}`}>
+                        {order.id}
+                      </Link>
+                      <small>
+                        {order.items.map((item) => `${item.name} x${item.quantity}`).join(", ")}
+                      </small>
+                    </div>
                   </td>
-                  <td>{order.email}</td>
-                  <td>{order.paymentStatus}</td>
-                  <td>
+                  <td data-label="Customer">{order.email}</td>
+                  <td data-label="Payment">{order.paymentStatus}</td>
+                  <td data-label="Status">
                     <span className="admin-status active">{order.status.replace("_", " ")}</span>
                   </td>
-                  <td>{new Date(order.updatedAt).toLocaleDateString("en-LK")}</td>
+                  <td data-label="Updated">{new Date(order.updatedAt).toLocaleDateString("en-LK")}</td>
                 </tr>
               ))}
             </tbody>

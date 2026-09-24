@@ -12,17 +12,6 @@ export default async function AdminMessagesPage() {
 
   return (
     <main className="admin-page">
-      <div className="admin-page-heading">
-        <div>
-          <span className="admin-kicker">Customer conversations</span>
-          <h1>Messages</h1>
-          <p>
-            Review customer requests, questions, and payment follow-ups across every order chat.
-          </p>
-        </div>
-        <span className="admin-date">{threads.length} THREADS</span>
-      </div>
-
       <section className="admin-panel admin-threads-panel">
         <div className="admin-panel-header">
           <div>

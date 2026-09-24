@@ -143,18 +143,20 @@ export function UserManagement({
           <tbody>
             {filteredUsers.slice(0, isDashboardView ? 8 : 50).map((user) => (
               <tr key={user.id}>
-                <td>
-                  <strong>{user.firstName || "Customer"}</strong>
-                  <small>{user.email}</small>
+                <td data-label="Customer">
+                  <div className="admin-cell-main">
+                    <strong>{user.firstName || "Customer"}</strong>
+                    <small>{user.email}</small>
+                  </div>
                 </td>
-                <td>{user.country || "LK"}</td>
-                <td>
+                <td data-label="Country">{user.country || "LK"}</td>
+                <td data-label="Verification">
                   <span className={user.emailVerified ? "admin-status active" : "admin-status"}>
                     {user.emailVerified ? "Verified" : "Pending"}
                   </span>
                 </td>
-                <td>{new Date(user.createdAt).toLocaleDateString("en-LK")}</td>
-                <td className="admin-table-action">
+                <td data-label="Registered">{new Date(user.createdAt).toLocaleDateString("en-LK")}</td>
+                <td data-label="Actions" className="admin-table-action">
                   <button
                     className="admin-action-button"
                     type="button"

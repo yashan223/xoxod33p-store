@@ -16,13 +16,25 @@ export default async function AdminLayout({ children }: Readonly<{ children: Rea
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
-        <Link className="admin-brand" href="/admin">
-          <span className="brand-mark">X</span>
-          <span>
-            <strong>xoxod33p</strong>
-            <small>ADMIN CONSOLE</small>
-          </span>
-        </Link>
+        <div className="admin-sidebar-brand-row">
+          <Link className="admin-brand" href="/admin">
+            <span className="brand-mark">X</span>
+            <span>
+              <strong>xoxod33p</strong>
+              <small>ADMIN CONSOLE</small>
+            </span>
+          </Link>
+          <div className="admin-sidebar-mobile-actions">
+            <Link className="admin-mobile-quick-btn" href="/">
+              Store ↗
+            </Link>
+            <form action="/api/auth/sign-out" method="post">
+              <button className="admin-mobile-sign-out-btn" type="submit">
+                Sign out
+              </button>
+            </form>
+          </div>
+        </div>
         <AdminNav />
         <div className="admin-sidebar-footer">
           <Link className="admin-store-link" href="/">

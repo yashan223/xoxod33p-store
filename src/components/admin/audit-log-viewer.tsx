@@ -164,23 +164,25 @@ export function AuditLogViewer({ logs: initialLogs, isDashboardView = false }: A
           <tbody>
             {filteredLogs.slice(0, isDashboardView ? 8 : 40).map((log) => (
               <tr key={log.id}>
-                <td style={{ whiteSpace: "nowrap" }}>
+                <td data-label="Timestamp" style={{ whiteSpace: "nowrap" }}>
                   <span className="admin-audit-time">
                     <Clock size={11} style={{ marginRight: 4, opacity: 0.7 }} />
                     {formatTime(log.createdAt)}
                   </span>
                 </td>
-                <td>{getActionBadge(log.action)}</td>
-                <td>
+                <td data-label="Action">{getActionBadge(log.action)}</td>
+                <td data-label="Actor">
                   <span className="admin-audit-actor">{log.actorEmail || "system"}</span>
                 </td>
-                <td>
-                  <strong>{log.targetName || log.targetId || "-"}</strong>
-                  {log.targetId && log.targetName && (
-                    <small className="admin-audit-target-id">{log.targetId}</small>
-                  )}
+                <td data-label="Target">
+                  <div className="admin-cell-main">
+                    <strong>{log.targetName || log.targetId || "-"}</strong>
+                    {log.targetId && log.targetName && (
+                      <small className="admin-audit-target-id">{log.targetId}</small>
+                    )}
+                  </div>
                 </td>
-                <td>
+                <td data-label="Details">
                   <span className="admin-audit-details">{log.details || "-"}</span>
                 </td>
               </tr>
