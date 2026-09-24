@@ -7,12 +7,15 @@ import { useRouter } from "next/navigation";
 import {
   ArrowRight,
   Check,
+  LogIn,
+  LogOut,
   Menu,
   PackageCheck,
   Search,
   Server,
   ShoppingBag,
   Trash2,
+  User,
   Wrench,
   X,
 } from "lucide-react";
@@ -332,6 +335,35 @@ export function Storefront({
           >
             FAQ
           </a>
+          <div className="mobile-nav-auth">
+            {currentUser ? (
+              <>
+                <Link
+                  className="mobile-nav-link"
+                  href="/dashboard"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  <User size={15} />
+                  <span>Dashboard</span>
+                </Link>
+                <form action="/api/auth/sign-out" method="post" className="mobile-nav-signout-form">
+                  <button className="mobile-nav-link mobile-nav-signout-btn" type="submit">
+                    <LogOut size={15} />
+                    <span>Sign out</span>
+                  </button>
+                </form>
+              </>
+            ) : (
+              <Link
+                className="mobile-nav-link mobile-nav-signin-btn"
+                href="/sign-in"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                <LogIn size={15} />
+                <span>Sign in</span>
+              </Link>
+            )}
+          </div>
         </nav>
         <div className="header-actions">
           {currentUser ? (
@@ -347,7 +379,7 @@ export function Storefront({
             <ShoppingBag size={17} /> Cart <span>{cartQuantity}</span>
           </Button>
           {currentUser && (
-            <form action="/api/auth/sign-out" method="post">
+            <form action="/api/auth/sign-out" method="post" className="desktop-sign-out-form">
               <button className="ui-button ui-button-ghost sign-in-button" type="submit">
                 Sign out
               </button>
