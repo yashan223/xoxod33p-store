@@ -202,19 +202,19 @@ export function AuthForm({ mode }: AuthFormProps) {
           </div>
         </label>
         {!isSignUp && (
-          <label className="auth-checkbox">
-            <input
-              type="checkbox"
-              checked={rememberMe}
-              onChange={(event) => setRememberMe(event.target.checked)}
-            />{" "}
-            Remember me
-          </label>
-        )}
-        {!isSignUp && (
-          <Link className="auth-forgot-link" href="/forgot-password">
-            Forgot password?
-          </Link>
+          <div className="auth-options-row">
+            <label className="auth-checkbox">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(event) => setRememberMe(event.target.checked)}
+              />{" "}
+              Remember me
+            </label>
+            <Link className="auth-forgot-link" href="/forgot-password">
+              Forgot password?
+            </Link>
+          </div>
         )}
         {error && <p className="auth-message auth-error">{error}</p>}
         {notice && <p className="auth-message auth-success">{notice}</p>}
