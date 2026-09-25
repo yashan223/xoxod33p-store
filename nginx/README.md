@@ -13,19 +13,12 @@ npm install
 npm run build
 ```
 
-### Option A: Using PM2 (Recommended)
+### Running with PM2
 ```bash
 sudo npm install -g pm2
 pm2 start ecosystem.config.cjs
 pm2 save
 pm2 startup
-```
-
-### Option B: Using Systemd
-```bash
-sudo cp deploy/xoxod33p-store.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable --now xoxod33p-store
 ```
 
 ---
