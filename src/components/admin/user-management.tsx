@@ -3,6 +3,7 @@
 import { Trash2, Search, UserCheck, UserX, Shield } from "lucide-react";
 import Link from "next/link";
 import { useState, useMemo } from "react";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 
 export type AdminUserView = {
   id: string;
@@ -29,22 +30,25 @@ export function UserManagement({
   const [filterVerification, setFilterVerification] = useState<"all" | "verified" | "pending">(
     "all",
   );
+  const [userToDelete, setUserToDelete] = useState<AdminUserView | null>(null);
 
-  async function handleDelete(user: AdminUserView) {
-    if (!window.confirm(`Delete ${user.email}? This also signs the user out of every device.`))
-      return;
-    setPendingId(user.id);
+  async function confirmDeleteUser() {
+    if (!userToDelete) return;
+    setPendingId(userToDelete.id);
     try {
       const response = await fetch("/api/admin/users", {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: user.id }),
+        body: JSON.stringify({ id: userToDelete.id }),
       });
       if (!response.ok) {
         const body = (await response.json().catch(() => null)) as { error?: string } | null;
         throw new Error(body?.error ?? "Unable to delete user.");
       }
-      setUsers((currentUsers) => currentUsers.filter((currentUser) => currentUser.id !== user.id));
+      setUsers((currentUsers) =>
+        currentUsers.filter((currentUser) => currentUser.id !== userToDelete.id),
+      );
+      setUserToDelete(null);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "Unable to delete user.");
     } finally {
@@ -155,12 +159,14 @@ export function UserManagement({
                     {user.emailVerified ? "Verified" : "Pending"}
                   </span>
                 </td>
-                <td data-label="Registered">{new Date(user.createdAt).toLocaleDateString("en-LK")}</td>
+                <td data-label="Registered">
+                  {new Date(user.createdAt).toLocaleDateString("en-LK")}
+                </td>
                 <td data-label="Actions" className="admin-table-action">
                   <button
                     className="admin-action-button"
                     type="button"
-                    onClick={() => void handleDelete(user)}
+                    onClick={() => setUserToDelete(user)}
                     disabled={pendingId === user.id}
                     aria-label={`Delete ${user.email}`}
                     title="Delete user"
@@ -176,6 +182,24 @@ export function UserManagement({
           <p className="admin-empty">No registered customer accounts found.</p>
         )}
       </div>
+
+      <ConfirmationModal
+        isOpen={Boolean(userToDelete)}
+        onClose={() => setUserToDelete(null)}
+        title="Delete User"
+        description={
+          userToDelete ? (
+            <span>
+              Are you sure you want to delete <strong>{userToDelete.email}</strong>? This action
+              cannot be undone and signs the user out of every device.
+            </span>
+          ) : null
+        }
+        confirmText="Delete user"
+        variant="danger"
+        isLoading={Boolean(pendingId)}
+        onConfirm={confirmDeleteUser}
+      />
     </section>
   );
 }

@@ -21,6 +21,7 @@ import {
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
 import type { Product, ProductType } from "@/types/product";
 
 type ProductManagerProps = {
@@ -81,6 +82,8 @@ export function ProductManager({
   const [downloadFile, setDownloadFile] = useState<File | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   function changeDraft<K extends keyof Draft>(key: K, value: Draft[K]) {
     setDraft((current) => ({ ...current, [key]: value }));
@@ -269,13 +272,25 @@ export function ProductManager({
     );
   }
 
-  async function deleteProduct(product: Product) {
-    if (!window.confirm(`Are you sure you want to delete "${product.name}"?`)) return;
-    const response = await fetch(`/api/admin/products/${product.id}`, { method: "DELETE" });
-    if (response.ok) {
-      setProducts((current) => current.filter((item) => item.id !== product.id));
-    } else {
-      alert("Unable to delete product.");
+  function deleteProduct(product: Product) {
+    setProductToDelete(product);
+  }
+
+  async function confirmDeleteProduct() {
+    if (!productToDelete) return;
+    setIsDeleting(true);
+    try {
+      const response = await fetch(`/api/admin/products/${productToDelete.id}`, {
+        method: "DELETE",
+      });
+      if (response.ok) {
+        setProducts((current) => current.filter((item) => item.id !== productToDelete.id));
+        setProductToDelete(null);
+      } else {
+        setStatus("Unable to delete product.");
+      }
+    } finally {
+      setIsDeleting(false);
     }
   }
 
@@ -703,6 +718,17 @@ export function ProductManager({
           </div>
         </div>
       )}
+
+      <ConfirmationModal
+        isOpen={Boolean(productToDelete)}
+        onClose={() => setProductToDelete(null)}
+        title="Delete Product"
+        description={`Are you sure you want to delete "${productToDelete?.name}"? This action cannot be undone.`}
+        confirmText="Delete product"
+        variant="danger"
+        isLoading={isDeleting}
+        onConfirm={confirmDeleteProduct}
+      />
     </div>
   );
 }
