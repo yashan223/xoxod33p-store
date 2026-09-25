@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPaymentsLkClient, getPaymentsReturnUrl } from "@/server/payments/payments-lk";
 import { getCurrentUser } from "@/server/auth/session";
+import { isUserAdmin } from "@/server/auth/admin";
 import { getOrderForUser } from "@/server/orders/orders";
 import { enforceRateLimit } from "@/server/rate-limit";
 
@@ -34,6 +35,8 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: "Sign in before placing an order." }, { status: 401 });
+  if (isUserAdmin(user))
+    return NextResponse.json({ error: "Admins cannot purchase items." }, { status: 403 });
   const order = await getOrderForUser(orderId, user.id);
   if (!order) return NextResponse.json({ error: "Order not found." }, { status: 404 });
   if (!["requested", "accepted"].includes(order.status))

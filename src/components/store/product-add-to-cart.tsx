@@ -8,12 +8,18 @@ import type { Product } from "@/types/product";
 type CartItem = { productId: string; quantity: number };
 const cartStorageKey = "xoxod33p-cart";
 
-export function ProductAddToCart({ product }: { product: Product }) {
+export function ProductAddToCart({
+  product,
+  isAdmin = false,
+}: {
+  product: Product;
+  isAdmin?: boolean;
+}) {
   const [added, setAdded] = useState(false);
   const unavailable = product.type === "server" && product.available === false;
 
   function addToCart() {
-    if (unavailable) return;
+    if (unavailable || isAdmin) return;
     let cart: CartItem[] = [];
     try {
       const stored = JSON.parse(window.localStorage.getItem(cartStorageKey) ?? "[]") as unknown;
@@ -36,6 +42,14 @@ export function ProductAddToCart({ product }: { product: Product }) {
       window.dispatchEvent(new Event("xoxod33p-cart-updated"));
     }
     setAdded(true);
+  }
+
+  if (isAdmin) {
+    return (
+      <Button disabled variant="outline" title="Admins cannot purchase items">
+        Admin view (disabled)
+      </Button>
+    );
   }
 
   return (

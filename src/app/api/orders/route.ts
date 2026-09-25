@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
+import { isUserAdmin } from "@/server/auth/admin";
 import { createOrder } from "@/server/orders/orders";
 import { enforceRateLimit } from "@/server/rate-limit";
 
@@ -12,6 +13,12 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user)
     return NextResponse.json({ error: "Sign in before requesting a server." }, { status: 401 });
+
+  if (isUserAdmin(user))
+    return NextResponse.json(
+      { error: "Admins cannot place orders or purchase items." },
+      { status: 403 },
+    );
 
   const body = (await request.json().catch(() => null)) as OrderRequest | null;
   const orderId = body?.orderId?.trim();

@@ -76,9 +76,11 @@ function createOrderReference() {
 export function Storefront({
   products,
   currentUser,
+  isAdmin = false,
 }: {
   products: Product[];
   currentUser: { email: string; firstName?: string } | null;
+  isAdmin?: boolean;
 }) {
   const router = useRouter();
   const [category, setCategory] = useState("all");
@@ -199,14 +201,22 @@ export function Storefront({
   }, [products]);
 
   useEffect(() => {
+    if (isAdmin) {
+      setCart([]);
+      try {
+        window.localStorage.removeItem(cartStorageKey);
+      } catch {}
+      return;
+    }
     if (new URLSearchParams(window.location.search).get("cart") !== "1") return;
     const timeoutId = window.setTimeout(() => setIsCartOpen(true));
     return () => window.clearTimeout(timeoutId);
-  }, []);
+  }, [isAdmin]);
 
   useEffect(() => {
-    if (isCartHydrated) window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
-  }, [cart, isCartHydrated]);
+    if (isCartHydrated && !isAdmin)
+      window.localStorage.setItem(cartStorageKey, JSON.stringify(cart));
+  }, [cart, isCartHydrated, isAdmin]);
 
   const visibleProducts = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -234,6 +244,7 @@ export function Storefront({
   const cartQuantity = cartProducts.reduce((total, item) => total + item.quantity, 0);
 
   function addToCart(productId: string) {
+    if (isAdmin) return;
     const product = products.find((item) => item.id === productId);
     if (product?.type === "server" && product.available === false) return;
     setCart((currentCart) => {
@@ -247,6 +258,11 @@ export function Storefront({
   }
 
   async function startCheckout() {
+    if (isAdmin) {
+      setCheckoutState("error");
+      setCheckoutError("Admins cannot purchase items.");
+      return;
+    }
     if (cartProducts.length === 0 || checkoutState === "loading") return;
     setCheckoutState("loading");
     setCheckoutError("");
@@ -341,11 +357,11 @@ export function Storefront({
               <>
                 <Link
                   className="mobile-nav-link"
-                  href="/dashboard"
+                  href={isAdmin ? "/admin" : "/dashboard"}
                   onClick={() => setIsMenuOpen(false)}
                 >
                   <User size={15} />
-                  <span>Dashboard</span>
+                  <span>{isAdmin ? "Admin" : "Dashboard"}</span>
                 </Link>
                 <form action="/api/auth/sign-out" method="post" className="mobile-nav-signout-form">
                   <button className="mobile-nav-link mobile-nav-signout-btn" type="submit">
@@ -368,17 +384,22 @@ export function Storefront({
         </nav>
         <div className="header-actions">
           {currentUser ? (
-            <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">
-              Dashboard
+            <Link
+              className="ui-button ui-button-ghost sign-in-button"
+              href={isAdmin ? "/admin" : "/dashboard"}
+            >
+              {isAdmin ? "Admin" : "Dashboard"}
             </Link>
           ) : (
             <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">
               Sign in
             </Link>
           )}
-          <Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}>
-            <ShoppingBag size={17} /> Cart <span>{cartQuantity}</span>
-          </Button>
+          {!isAdmin && (
+            <Button variant="outline" className="cart-button" onClick={() => setIsCartOpen(true)}>
+              <ShoppingBag size={17} /> Cart <span>{cartQuantity}</span>
+            </Button>
+          )}
           {currentUser && (
             <form action="/api/auth/sign-out" method="post" className="desktop-sign-out-form">
               <button className="ui-button ui-button-ghost sign-in-button" type="submit">
@@ -575,6 +596,15 @@ export function Storefront({
                   {product.type === "server" && !isAvailable ? (
                     <Button variant="outline" className="add-button" disabled>
                       Unavailable
+                    </Button>
+                  ) : isAdmin ? (
+                    <Button
+                      variant="outline"
+                      className="add-button"
+                      disabled
+                      title="Admins cannot purchase items"
+                    >
+                      Admin view (disabled)
                     </Button>
                   ) : (
                     <Button

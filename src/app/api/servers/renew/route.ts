@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCurrentUser } from "@/server/auth/session";
+import { isUserAdmin } from "@/server/auth/admin";
 import { createServerRenewalCheckout } from "@/server/subscriptions/servers";
 import { enforceRateLimit } from "@/server/rate-limit";
 
@@ -12,6 +13,13 @@ export async function POST(request: Request) {
   const user = await getCurrentUser();
   if (!user) {
     return NextResponse.json({ error: "Please sign in to renew your server." }, { status: 401 });
+  }
+
+  if (isUserAdmin(user)) {
+    return NextResponse.json(
+      { error: "Admins cannot renew servers as customers." },
+      { status: 403 },
+    );
   }
 
   let body: { subscriptionId?: string };

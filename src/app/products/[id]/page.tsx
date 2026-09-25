@@ -6,6 +6,7 @@ import Image from "next/image";
 import { ArrowLeft, Check, PackageCheck, Server, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/server/auth/session";
+import { isAdminUser } from "@/server/auth/admin";
 import { getActiveProductById } from "@/server/catalog/products";
 import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
@@ -54,6 +55,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const isService = product.type === "service";
   const currentUser = await getCurrentUser();
+  const isAdmin = await isAdminUser();
   const features = parseProductFeatures(product);
 
   const structuredData = {
@@ -108,15 +110,18 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </nav>
         <div className="header-actions">
           {currentUser ? (
-            <Link className="ui-button ui-button-ghost sign-in-button" href="/dashboard">
-              Dashboard
+            <Link
+              className="ui-button ui-button-ghost sign-in-button"
+              href={isAdmin ? "/admin" : "/dashboard"}
+            >
+              {isAdmin ? "Admin" : "Dashboard"}
             </Link>
           ) : (
             <Link className="ui-button ui-button-ghost sign-in-button" href="/sign-in">
               Sign in
             </Link>
           )}
-          <CartButton />
+          {!isAdmin && <CartButton />}
           <Link className="back-link" href="/">
             <ArrowLeft size={15} /> Back to store
           </Link>
@@ -194,12 +199,19 @@ export default async function ProductDetailPage({ params }: PageProps) {
               </span>
               <strong>{formatPrice(product.price)}</strong>
             </div>
-            <ProductAddToCart product={product} />
+            <ProductAddToCart product={product} isAdmin={isAdmin} />
           </div>
-          <small className="detail-note">
-            Sign in before ordering to save this purchase to your account. Payments are handled
-            securely by Payments.lk.
-          </small>
+          {isAdmin ? (
+            <small className="detail-note">
+              You are viewing this product as an administrator. Purchasing and cart operations are
+              disabled for admin accounts.
+            </small>
+          ) : (
+            <small className="detail-note">
+              Sign in before ordering to save this purchase to your account. Payments are handled
+              securely by Payments.lk.
+            </small>
+          )}
         </article>
       </div>
     </main>

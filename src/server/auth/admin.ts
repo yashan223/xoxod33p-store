@@ -19,20 +19,21 @@ export function isConfiguredAdminEmail(email: string) {
   return allowedEmails.has(email.trim().toLowerCase());
 }
 
+export function isUserAdmin(user: { id?: string; email: string } | null | undefined): boolean {
+  if (!user?.email) return false;
+  const allowedUserIds = valuesFromEnv(process.env.ADMIN_USER_IDS);
+  return (user.id ? allowedUserIds.has(user.id) : false) || isConfiguredAdminEmail(user.email);
+}
+
 export async function isAdminUser() {
   const user = await getCurrentUser();
-  if (!user) return false;
-  const allowedUserIds = valuesFromEnv(process.env.ADMIN_USER_IDS);
-  return allowedUserIds.has(user.id) || isConfiguredAdminEmail(user.email);
+  return isUserAdmin(user);
 }
 
 export async function requireAdmin() {
   const user = await getCurrentUser();
   if (!user) redirect("/sign-in?redirect_url=/admin");
 
-  const allowedUserIds = valuesFromEnv(process.env.ADMIN_USER_IDS);
-  const emailMatches = isConfiguredAdminEmail(user.email);
-
-  if (!allowedUserIds.has(user.id) && !emailMatches) redirect("/");
+  if (!isUserAdmin(user)) redirect("/");
   return user;
 }
