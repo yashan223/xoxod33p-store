@@ -35,6 +35,12 @@ function productInput(body: Record<string, unknown>) {
     tag: typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : undefined,
     imageUrl:
       typeof body.imageUrl === "string" && body.imageUrl.trim() ? body.imageUrl.trim() : undefined,
+    images: Array.isArray(body.images)
+      ? body.images
+          .filter((item): item is string => typeof item === "string")
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : undefined,
   };
 }
 

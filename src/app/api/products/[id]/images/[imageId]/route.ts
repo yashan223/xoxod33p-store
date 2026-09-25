@@ -1,25 +1,37 @@
 import { NextResponse } from "next/server";
 import { getDatabase } from "@/server/db/mongodb";
 import { readProductFile } from "@/server/storage/private-files";
+import type { ProductGalleryItem } from "@/types/product";
 
-type RouteContext = { params: Promise<{ id: string }> };
+type RouteContext = { params: Promise<{ id: string; imageId: string }> };
 
 export const runtime = "nodejs";
 
 export async function GET(_request: Request, context: RouteContext) {
-  const { id } = await context.params;
+  const { id, imageId } = await context.params;
   const product = await (
     await getDatabase()
   )
     .collection<{
       imageKey?: string;
       imageContentType?: string;
-      galleryImages?: Array<{ key?: string; contentType?: string }>;
+      galleryImages?: ProductGalleryItem[];
     }>("products")
     .findOne({ id }, { projection: { imageKey: 1, imageContentType: 1, galleryImages: 1 } });
 
-  const targetKey = product?.imageKey || product?.galleryImages?.[0]?.key;
-  const targetContentType = product?.imageContentType || product?.galleryImages?.[0]?.contentType;
+  if (!product) return new NextResponse("Image not found.", { status: 404 });
+
+  let targetKey = product.galleryImages?.find(
+    (item) => item.id === imageId || item.url.endsWith(`/${imageId}`),
+  )?.key;
+  let targetContentType = product.galleryImages?.find(
+    (item) => item.id === imageId || item.url.endsWith(`/${imageId}`),
+  )?.contentType;
+
+  if (!targetKey && imageId === "main") {
+    targetKey = product.imageKey;
+    targetContentType = product.imageContentType;
+  }
 
   if (!targetKey) return new NextResponse("Image not found.", { status: 404 });
 

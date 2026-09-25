@@ -21,6 +21,7 @@ export async function PATCH(request: Request, context: RouteContext) {
     "available",
     "tag",
     "imageUrl",
+    "images",
   ];
   const update = Object.fromEntries(
     Object.entries(body).filter(([key, value]) => allowed.includes(key) && value !== undefined),
@@ -47,6 +48,20 @@ export async function PATCH(request: Request, context: RouteContext) {
   }
   if ("imageUrl" in update) {
     update.imageUrl = typeof update.imageUrl === "string" ? update.imageUrl.trim() : "";
+  }
+  if ("images" in update) {
+    if (Array.isArray(update.images)) {
+      const sanitized = update.images
+        .filter((item): item is string => typeof item === "string")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      update.images = sanitized;
+      if (!update.imageUrl && sanitized.length > 0) {
+        update.imageUrl = sanitized[0];
+      }
+    } else {
+      delete update.images;
+    }
   }
   if ("available" in update) {
     update.available = Boolean(update.available);

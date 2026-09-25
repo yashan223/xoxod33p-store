@@ -17,6 +17,7 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
+  Camera,
 } from "lucide-react";
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ type Draft = {
   available: boolean;
   tag: string;
   imageUrl?: string;
+  images?: string[];
 };
 
 const blankDraft: Draft = {
@@ -55,6 +57,7 @@ const blankDraft: Draft = {
   available: true,
   tag: "",
   imageUrl: "",
+  images: [],
 };
 
 const ACCENT_OPTIONS = [
@@ -79,6 +82,8 @@ export function ProductManager({
   const [status, setStatus] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [imageFile, setImageFile] = useState<File | null>(null);
+  const [extraImageFiles, setExtraImageFiles] = useState<File[]>([]);
+  const [galleryUrls, setGalleryUrls] = useState<string[]>([]);
   const [downloadFile, setDownloadFile] = useState<File | null>(null);
   const [filterType, setFilterType] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -93,6 +98,8 @@ export function ProductManager({
     setEditingProduct(null);
     setDraft(blankDraft);
     setImageFile(null);
+    setExtraImageFiles([]);
+    setGalleryUrls([]);
     setDownloadFile(null);
     setStatus("");
     setIsEditorOpen(true);
@@ -100,6 +107,12 @@ export function ProductManager({
 
   function editProduct(product: Product) {
     setEditingProduct(product);
+    const existingImages =
+      product.images && product.images.length > 0
+        ? product.images
+        : product.imageUrl
+          ? [product.imageUrl]
+          : [];
     setDraft({
       name: product.name,
       type: product.type,
@@ -111,8 +124,11 @@ export function ProductManager({
       available: product.available !== false,
       tag: product.tag ?? "",
       imageUrl: product.imageUrl ?? "",
+      images: existingImages,
     });
     setImageFile(null);
+    setExtraImageFiles([]);
+    setGalleryUrls(existingImages);
     setDownloadFile(null);
     setStatus("");
     setIsEditorOpen(true);
@@ -123,6 +139,8 @@ export function ProductManager({
     setEditingProduct(null);
     setDraft(blankDraft);
     setImageFile(null);
+    setExtraImageFiles([]);
+    setGalleryUrls([]);
     setDownloadFile(null);
     setStatus("");
     setIsSaving(false);
@@ -144,6 +162,7 @@ export function ProductManager({
         active: draft.active,
         available: draft.available,
         tag: draft.tag.trim(),
+        images: galleryUrls,
       };
       if (editingProduct && !imageFile && draft.imageUrl !== undefined) {
         payload.imageUrl = draft.imageUrl;
@@ -177,6 +196,7 @@ export function ProductManager({
       let downloadName = editingProduct
         ? editingProduct.downloadName
         : result.product?.downloadName;
+      let finalImages = [...galleryUrls];
 
       if (imageFile) {
         const imageForm = new FormData();
@@ -188,8 +208,33 @@ export function ProductManager({
         const imageResult = (await imageResponse.json()) as { imageUrl?: string; error?: string };
         if (imageResponse.ok && imageResult.imageUrl) {
           imageUrl = imageResult.imageUrl;
+          if (!finalImages.includes(imageUrl)) {
+            finalImages = [imageUrl, ...finalImages];
+          }
         } else if (!imageResponse.ok) {
           setStatus(imageResult.error ?? "Product saved, but image upload failed.");
+          setIsSaving(false);
+          return;
+        }
+      }
+
+      if (extraImageFiles.length > 0) {
+        const extraForm = new FormData();
+        for (const file of extraImageFiles) {
+          extraForm.append("files", file);
+        }
+        const extraResponse = await fetch(`/api/admin/products/${productId}/images`, {
+          method: "POST",
+          body: extraForm,
+        });
+        const extraResult = (await extraResponse.json()) as { images?: string[]; error?: string };
+        if (extraResponse.ok && Array.isArray(extraResult.images)) {
+          finalImages = extraResult.images;
+          if (!imageUrl && finalImages.length > 0) {
+            imageUrl = finalImages[0];
+          }
+        } else if (!extraResponse.ok) {
+          setStatus(extraResult.error ?? "Product saved, but screenshot upload failed.");
           setIsSaving(false);
           return;
         }
@@ -220,6 +265,7 @@ export function ProductManager({
                   ...item,
                   ...payload,
                   imageUrl,
+                  images: finalImages,
                   downloadName,
                   updatedAt: new Date().toISOString(),
                 }
@@ -232,6 +278,7 @@ export function ProductManager({
             ...result.product!,
             ...payload,
             imageUrl,
+            images: finalImages,
             downloadName,
           },
           ...current,
@@ -417,6 +464,19 @@ export function ProductManager({
                     )}
 
                     <div className="admin-card-art-badges">
+                      {product.images && product.images.length > 1 && (
+                        <span
+                          className="admin-badge admin-badge-tag"
+                          style={{
+                            background: "rgba(15, 23, 42, 0.85)",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: 4,
+                          }}
+                        >
+                          <Camera size={11} /> {product.images.length}
+                        </span>
+                      )}
                       {product.tag && (
                         <span className="admin-badge admin-badge-tag">{product.tag}</span>
                       )}
@@ -671,6 +731,151 @@ export function ProductManager({
                   <small>Upload PNG, JPG, or WebP (up to 10MB)</small>
                 </div>
               </label>
+
+              <div className="product-editor-wide">
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: 6,
+                  }}
+                >
+                  <label style={{ margin: 0, fontWeight: 600, fontSize: 13 }}>
+                    {draft.type === "mod"
+                      ? "Mod Screenshots & Gallery"
+                      : "Additional Gallery Images"}
+                  </label>
+                  {draft.type === "mod" && (
+                    <span className="admin-gallery-pill">
+                      <Camera size={12} /> Mod Pack Showcase
+                    </span>
+                  )}
+                </div>
+
+                <div className="admin-file-upload-box admin-gallery-box">
+                  {galleryUrls.length > 0 && (
+                    <div>
+                      <small style={{ display: "block", marginBottom: 8, color: "#64748b" }}>
+                        Saved images ({galleryUrls.length}):
+                      </small>
+                      <div className="admin-gallery-items-grid">
+                        {galleryUrls.map((url, idx) => (
+                          <div key={url + idx} className="admin-gallery-item-card">
+                            <img src={url} alt={`Gallery item ${idx + 1}`} />
+                            <span className="admin-gallery-item-badge">
+                              {idx === 0 ? "Cover" : `#${idx + 1}`}
+                            </span>
+                            <button
+                              type="button"
+                              className="admin-gallery-item-remove"
+                              title="Remove image"
+                              onClick={() => {
+                                const nextList = galleryUrls.filter((u) => u !== url);
+                                setGalleryUrls(nextList);
+                                if (draft.imageUrl === url) {
+                                  changeDraft("imageUrl", nextList[0] ?? "");
+                                }
+                              }}
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {extraImageFiles.length > 0 && (
+                    <div style={{ marginTop: 8 }}>
+                      <small
+                        style={{
+                          display: "block",
+                          marginBottom: 8,
+                          color: "#0284c7",
+                          fontWeight: 600,
+                        }}
+                      >
+                        Pending upload ({extraImageFiles.length} file
+                        {extraImageFiles.length > 1 ? "s" : ""}):
+                      </small>
+                      <div className="admin-gallery-items-grid">
+                        {extraImageFiles.map((file, idx) => (
+                          <div
+                            key={file.name + idx}
+                            className="admin-gallery-item-card"
+                            style={{ borderColor: "#38bdf8" }}
+                          >
+                            <img src={URL.createObjectURL(file)} alt={file.name} />
+                            <span
+                              className="admin-gallery-item-badge"
+                              style={{ background: "#0284c7" }}
+                            >
+                              New
+                            </span>
+                            <button
+                              type="button"
+                              className="admin-gallery-item-remove"
+                              title="Remove new image"
+                              onClick={() =>
+                                setExtraImageFiles((prev) => prev.filter((_, i) => i !== idx))
+                              }
+                            >
+                              <Trash2 size={11} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <label style={{ display: "block", cursor: "pointer", marginTop: 4 }}>
+                    <input
+                      accept="image/*"
+                      type="file"
+                      multiple
+                      style={{ display: "none" }}
+                      onChange={(event) => {
+                        const selected = Array.from(event.target.files ?? []);
+                        if (selected.length > 0) {
+                          setExtraImageFiles((prev) => [...prev, ...selected]);
+                        }
+                        event.target.value = "";
+                      }}
+                    />
+                    <div
+                      style={{
+                        border: "1.5px dashed #94a3b8",
+                        borderRadius: 8,
+                        padding: "12px 16px",
+                        textAlign: "center",
+                        background: "#f8fafc",
+                        cursor: "pointer",
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 6,
+                          color: "#2563eb",
+                          fontWeight: 600,
+                          fontSize: 13,
+                        }}
+                      >
+                        <Camera size={15} />
+                        <span>
+                          Add {draft.type === "mod" ? "Mod Screenshots" : "Gallery Images"} (Select
+                          multiple)
+                        </span>
+                      </div>
+                      <small style={{ display: "block", color: "#64748b", marginTop: 2 }}>
+                        Upload multiple images/screenshots (PNG, JPG, WebP up to 10MB each)
+                      </small>
+                    </div>
+                  </label>
+                </div>
+              </div>
 
               <label className="product-editor-file-label">
                 Downloadable File (Digital Delivery)

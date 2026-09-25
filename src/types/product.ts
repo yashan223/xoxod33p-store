@@ -2,6 +2,14 @@ export const productTypes = ["server", "mod", "service"] as const;
 
 export type ProductType = (typeof productTypes)[number];
 
+export type ProductGalleryItem = {
+  id: string;
+  url: string;
+  key?: string;
+  contentType?: string;
+  fileName?: string;
+};
+
 export type Product = {
   id: string;
   type: ProductType;
@@ -14,6 +22,8 @@ export type Product = {
   imageUrl?: string;
   imageKey?: string;
   imageContentType?: string;
+  images?: string[];
+  galleryImages?: ProductGalleryItem[];
   active: boolean;
   available?: boolean;
   downloadKey?: string;

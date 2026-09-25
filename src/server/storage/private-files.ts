@@ -1,4 +1,4 @@
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile, unlink } from "node:fs/promises";
 import { basename, join, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 
@@ -55,4 +55,14 @@ export async function readProductFile(key: string) {
   const filePath = resolve(root, normalizedKey);
   assertInsideRoot(filePath);
   return readFile(filePath);
+}
+
+export async function deleteProductFile(key: string) {
+  try {
+    const root = getFilesRoot();
+    const normalizedKey = key.replace(/[/\\]+/g, sep);
+    const filePath = resolve(root, normalizedKey);
+    assertInsideRoot(filePath);
+    await unlink(filePath);
+  } catch {}
 }

@@ -10,6 +10,7 @@ import { isAdminUser } from "@/server/auth/admin";
 import { getActiveProductById } from "@/server/catalog/products";
 import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
+import { ProductGallery } from "@/components/store/product-gallery";
 import { absoluteUrl, siteName } from "@/lib/seo";
 import { cn } from "@/lib/utils";
 import { parseProductFeatures } from "@/lib/products";
@@ -70,7 +71,10 @@ export default async function ProductDetailPage({ params }: PageProps) {
         : isService
           ? "Setup service"
           : "Game mods and tools",
-    image: [product.imageUrl ? absoluteUrl(product.imageUrl) : absoluteUrl("/logo.png")],
+    image: (product.images && product.images.length > 0
+      ? product.images
+      : [product.imageUrl || "/logo.png"]
+    ).map((img) => absoluteUrl(img)),
     brand: { "@type": "Brand", name: siteName },
     offers: {
       "@type": "Offer",
@@ -128,38 +132,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </div>
       </header>
       <div className="product-detail-layout">
-        <div
-          className={cn(
-            "product-detail-visual",
-            `product-art-${product.accent}`,
-            product.imageUrl && "has-image",
-          )}
-        >
-          {product.imageUrl ? (
-            <Image
-              src={product.imageUrl}
-              alt={product.name}
-              fill
-              sizes="(max-width: 768px) 100vw, 50vw"
-              className="product-detail-image"
-              priority
-              style={{ objectFit: "cover" }}
-            />
-          ) : (
-            <div className="product-art-symbol">
-              {product.type === "server" ? (
-                <Server size={78} strokeWidth={1.2} />
-              ) : isService ? (
-                <Wrench size={78} strokeWidth={1.2} />
-              ) : (
-                <PackageCheck size={78} strokeWidth={1.2} />
-              )}
-            </div>
-          )}
-          <span className="product-art-label">
-            {product.type === "server" ? "SERVER" : isService ? "SERVICE" : "MOD PACK"}
-          </span>
-        </div>
+        <ProductGallery product={product} />
         <article className="product-detail-copy">
           <Badge>
             {product.tag ??

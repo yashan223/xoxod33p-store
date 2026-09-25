@@ -522,12 +522,12 @@ export function Storefront({
                   className={cn(
                     "product-art",
                     `product-art-${product.accent}`,
-                    product.imageUrl && "has-image",
+                    (product.imageUrl || product.images?.[0]) && "has-image",
                   )}
                 >
-                  {product.imageUrl ? (
+                  {product.imageUrl || product.images?.[0] ? (
                     <Image
-                      src={product.imageUrl}
+                      src={product.imageUrl || product.images![0]}
                       alt={product.name}
                       fill
                       sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
