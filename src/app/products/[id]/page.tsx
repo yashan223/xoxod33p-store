@@ -3,13 +3,15 @@ import { cache } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, PackageCheck, Server, Wrench } from "lucide-react";
+import { ArrowLeft, Check, PackageCheck, Server, Wrench } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { getCurrentUser } from "@/server/auth/session";
 import { getActiveProductById } from "@/server/catalog/products";
 import { CartButton } from "@/components/store/cart-button";
 import { ProductAddToCart } from "@/components/store/product-add-to-cart";
 import { absoluteUrl, siteName } from "@/lib/seo";
+import { cn } from "@/lib/utils";
+import { parseProductFeatures } from "@/lib/products";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,7 @@ export default async function ProductDetailPage({ params }: PageProps) {
 
   const isService = product.type === "service";
   const currentUser = await getCurrentUser();
+  const features = parseProductFeatures(product);
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -120,19 +123,37 @@ export default async function ProductDetailPage({ params }: PageProps) {
         </div>
       </header>
       <div className="product-detail-layout">
-        <div className={`product-detail-visual product-art-${product.accent}`}>
+        <div
+          className={cn(
+            "product-detail-visual",
+            `product-art-${product.accent}`,
+            product.imageUrl && "has-image",
+          )}
+        >
+          {product.imageUrl ? (
+            <Image
+              src={product.imageUrl}
+              alt={product.name}
+              fill
+              sizes="(max-width: 768px) 100vw, 50vw"
+              className="product-detail-image"
+              priority
+              style={{ objectFit: "cover" }}
+            />
+          ) : (
+            <div className="product-art-symbol">
+              {product.type === "server" ? (
+                <Server size={78} strokeWidth={1.2} />
+              ) : isService ? (
+                <Wrench size={78} strokeWidth={1.2} />
+              ) : (
+                <PackageCheck size={78} strokeWidth={1.2} />
+              )}
+            </div>
+          )}
           <span className="product-art-label">
             {product.type === "server" ? "SERVER" : isService ? "SERVICE" : "MOD PACK"}
           </span>
-          <div className="product-art-symbol">
-            {product.type === "server" ? (
-              <Server size={78} strokeWidth={1.2} />
-            ) : isService ? (
-              <Wrench size={78} strokeWidth={1.2} />
-            ) : (
-              <PackageCheck size={78} strokeWidth={1.2} />
-            )}
-          </div>
         </div>
         <article className="product-detail-copy">
           <Badge>
@@ -146,8 +167,21 @@ export default async function ProductDetailPage({ params }: PageProps) {
           <h1>{product.name}</h1>
           <p>{product.description}</p>
           <div className="product-detail-spec">
-            <span>Specifications</span>
-            <strong>{product.meta}</strong>
+            <span>
+              {product.type === "server" ? "Server Features & Specifications" : "Specifications"}
+            </span>
+            {features.length > 0 ? (
+              <ul className="product-detail-feature-points" aria-label="Product features">
+                {features.map((feat, idx) => (
+                  <li key={idx} className="product-detail-feature-item">
+                    <Check size={14} className="feature-check-icon" strokeWidth={2.5} />
+                    <span>{feat}</span>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <strong>{product.meta}</strong>
+            )}
           </div>
           <div className="product-detail-buy">
             <div>

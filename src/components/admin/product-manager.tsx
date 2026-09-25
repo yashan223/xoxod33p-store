@@ -40,6 +40,7 @@ type Draft = {
   active: boolean;
   available: boolean;
   tag: string;
+  imageUrl?: string;
 };
 
 const blankDraft: Draft = {
@@ -52,6 +53,7 @@ const blankDraft: Draft = {
   active: true,
   available: true,
   tag: "",
+  imageUrl: "",
 };
 
 const ACCENT_OPTIONS = [
@@ -105,6 +107,7 @@ export function ProductManager({
       active: product.active !== false,
       available: product.available !== false,
       tag: product.tag ?? "",
+      imageUrl: product.imageUrl ?? "",
     });
     setImageFile(null);
     setDownloadFile(null);
@@ -128,7 +131,7 @@ export function ProductManager({
     setStatus("");
 
     try {
-      const payload = {
+      const payload: Record<string, unknown> = {
         name: draft.name.trim(),
         type: draft.type,
         description: draft.description.trim(),
@@ -139,6 +142,9 @@ export function ProductManager({
         available: draft.available,
         tag: draft.tag.trim(),
       };
+      if (editingProduct && !imageFile && draft.imageUrl !== undefined) {
+        payload.imageUrl = draft.imageUrl;
+      }
 
       const response = await fetch(
         editingProduct ? `/api/admin/products/${editingProduct.id}` : "/api/admin/products",
@@ -162,12 +168,13 @@ export function ProductManager({
         return;
       }
 
-      let imageUrl = editingProduct ? editingProduct.imageUrl : result.product?.imageUrl;
+      let imageUrl = editingProduct
+        ? (draft.imageUrl ?? editingProduct.imageUrl)
+        : result.product?.imageUrl;
       let downloadName = editingProduct
         ? editingProduct.downloadName
         : result.product?.downloadName;
 
-      // Upload image if selected
       if (imageFile) {
         const imageForm = new FormData();
         imageForm.append("file", imageFile);
@@ -185,7 +192,6 @@ export function ProductManager({
         }
       }
 
-      // Upload downloadable file if selected
       if (downloadFile) {
         const fileForm = new FormData();
         fileForm.append("file", downloadFile);
@@ -319,7 +325,6 @@ export function ProductManager({
           </div>
         </div>
 
-        {/* Filter and Search Toolbar */}
         <div className="admin-catalog-toolbar">
           <div className="admin-catalog-tabs">
             <button
@@ -396,7 +401,6 @@ export function ProductManager({
                       <span>{product.type.toUpperCase()}</span>
                     )}
 
-                    {/* Top badging over art */}
                     <div className="admin-card-art-badges">
                       {product.tag && (
                         <span className="admin-badge admin-badge-tag">{product.tag}</span>
@@ -429,7 +433,10 @@ export function ProductManager({
                     <div className="admin-card-specs-row">
                       <span className="admin-card-meta">{product.meta}</span>
                       {product.downloadName && (
-                        <span className="admin-card-download-indicator" title="Downloadable file attached">
+                        <span
+                          className="admin-card-download-indicator"
+                          title="Downloadable file attached"
+                        >
                           <FileText size={11} /> {product.downloadName}
                         </span>
                       )}
@@ -440,7 +447,6 @@ export function ProductManager({
                       <span className="admin-card-id">{product.id}</span>
                     </div>
 
-                    {/* Action buttons */}
                     <div className="admin-product-actions">
                       <button
                         type="button"
@@ -487,7 +493,6 @@ export function ProductManager({
         )}
       </section>
 
-      {/* Add / Edit Item Modal */}
       {isEditorOpen && (
         <div
           className="product-modal"
@@ -514,7 +519,6 @@ export function ProductManager({
             </div>
 
             <form className="product-editor-form" onSubmit={saveProduct}>
-              {/* Row 1: Core Details */}
               <label>
                 Name *
                 <Input
@@ -548,7 +552,6 @@ export function ProductManager({
                 />
               </label>
 
-              {/* Row 2: Specification, Tag, and Color Theme */}
               <label>
                 Specification / Meta *
                 <Input
@@ -577,17 +580,13 @@ export function ProductManager({
                       onClick={() => changeDraft("accent", opt.value)}
                       title={opt.label}
                     >
-                      <span
-                        className="admin-accent-dot"
-                        style={{ backgroundColor: opt.color }}
-                      />
+                      <span className="admin-accent-dot" style={{ backgroundColor: opt.color }} />
                       <span>{opt.label}</span>
                     </button>
                   ))}
                 </div>
               </label>
 
-              {/* Row 3: Visibility & Availability Options */}
               <div className="product-editor-toggle-row">
                 <div className="admin-toggle-card">
                   <label className="admin-checkbox-label">
@@ -598,7 +597,9 @@ export function ProductManager({
                     />
                     <div>
                       <strong>Available for Order</strong>
-                      <small>If unchecked, customers see &quot;Unavailable&quot; and cannot order.</small>
+                      <small>
+                        If unchecked, customers see &quot;Unavailable&quot; and cannot order.
+                      </small>
                     </div>
                   </label>
                 </div>
@@ -618,20 +619,33 @@ export function ProductManager({
                 </div>
               </div>
 
-              {/* Row 4: Media & Files */}
               <label className="product-editor-file-label">
                 Product Image
                 <div className="admin-file-upload-box">
-                  {editingProduct?.imageUrl && !imageFile && (
+                  {draft.imageUrl && !imageFile && (
                     <div className="admin-current-preview">
                       <Image
-                        src={editingProduct.imageUrl}
+                        src={draft.imageUrl}
                         alt="Current preview"
                         width={60}
                         height={40}
                         style={{ objectFit: "cover", borderRadius: 4 }}
                       />
                       <span>Current image set</span>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        style={{
+                          marginLeft: "auto",
+                          color: "#ef4444",
+                          height: 28,
+                          padding: "0 8px",
+                        }}
+                        onClick={() => changeDraft("imageUrl", "")}
+                      >
+                        <Trash2 size={13} style={{ marginRight: 4 }} /> Remove
+                      </Button>
                     </div>
                   )}
                   <input
@@ -660,7 +674,6 @@ export function ProductManager({
                 </div>
               </label>
 
-              {/* Row 5: Description */}
               <label className="product-editor-wide">
                 Description *
                 <textarea
@@ -671,7 +684,6 @@ export function ProductManager({
                 />
               </label>
 
-              {/* Status and Action Buttons */}
               {status && (
                 <div className="product-editor-status-banner">
                   <AlertCircle size={16} />

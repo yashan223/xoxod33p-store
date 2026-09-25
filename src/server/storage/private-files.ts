@@ -3,10 +3,11 @@ import { basename, join, relative, resolve, sep } from "node:path";
 import { randomBytes } from "node:crypto";
 
 function getFilesRoot() {
-  return resolve(
-    /* turbopackIgnore: true */ process.env.PRODUCT_FILES_ROOT ||
-      join(process.cwd(), ".private-product-files"),
-  );
+  const configured = process.env.PRODUCT_FILES_ROOT;
+  if (process.platform === "win32" && configured && /^\/[a-zA-Z]/.test(configured)) {
+    return resolve(join(process.cwd(), ".private-product-files"));
+  }
+  return resolve(configured || join(process.cwd(), ".private-product-files"));
 }
 
 function safeFileName(fileName: string) {
@@ -28,7 +29,7 @@ function assertInsideRoot(filePath: string) {
   if (
     pathFromRoot === ".." ||
     pathFromRoot.startsWith(`..${sep}`) ||
-    resolve(/* turbopackIgnore: true */ root) === resolvedPath
+    resolve(root) === resolvedPath
   )
     throw new Error("Invalid private file path.");
 }
@@ -42,7 +43,7 @@ export async function uploadProductFile(productId: string, file: File) {
   assertInsideRoot(filePath);
   await writeFile(filePath, Buffer.from(await file.arrayBuffer()), { flag: "wx" });
   return {
-    key: relative(root, filePath),
+    key: relative(root, filePath).replace(/\\/g, "/"),
     fileName: safeFileName(file.name),
     contentType: file.type || "application/octet-stream",
   };
@@ -50,7 +51,8 @@ export async function uploadProductFile(productId: string, file: File) {
 
 export async function readProductFile(key: string) {
   const root = getFilesRoot();
-  const filePath = resolve(root, key);
+  const normalizedKey = key.replace(/[/\\]+/g, sep);
+  const filePath = resolve(root, normalizedKey);
   assertInsideRoot(filePath);
-  return readFile(/* turbopackIgnore: true */ filePath);
+  return readFile(filePath);
 }

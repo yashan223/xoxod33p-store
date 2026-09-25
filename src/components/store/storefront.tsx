@@ -25,6 +25,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import PixelBlast from "@/components/PixelBlast";
 import { cn } from "@/lib/utils";
+import { parseProductFeatures } from "@/lib/products";
 import type { Product } from "@/types/product";
 
 const categories = [
@@ -483,6 +484,7 @@ export function Storefront({
             const inCart = cart.some((item) => item.productId === product.id);
             const isService = product.type === "service";
             const isAvailable = product.type !== "server" || product.available !== false;
+            const features = parseProductFeatures(product);
             return (
               <Card
                 className="product-card"
@@ -495,7 +497,33 @@ export function Storefront({
                 role="link"
                 tabIndex={0}
               >
-                <div className={cn("product-art", `product-art-${product.accent}`)}>
+                <div
+                  className={cn(
+                    "product-art",
+                    `product-art-${product.accent}`,
+                    product.imageUrl && "has-image",
+                  )}
+                >
+                  {product.imageUrl ? (
+                    <Image
+                      src={product.imageUrl}
+                      alt={product.name}
+                      fill
+                      sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 360px"
+                      className="product-art-image"
+                      priority={false}
+                    />
+                  ) : (
+                    <div className="product-art-symbol">
+                      {product.type === "server" ? (
+                        <Server size={42} strokeWidth={1.4} />
+                      ) : product.type === "service" ? (
+                        <Wrench size={42} strokeWidth={1.4} />
+                      ) : (
+                        <PackageCheck size={42} strokeWidth={1.4} />
+                      )}
+                    </div>
+                  )}
                   <span className="product-art-label">
                     {product.type === "server"
                       ? "SERVER"
@@ -513,15 +541,6 @@ export function Storefront({
                       {isAvailable ? "Available" : "Unavailable"}
                     </span>
                   )}
-                  <div className="product-art-symbol">
-                    {product.type === "server" ? (
-                      <Server size={42} strokeWidth={1.4} />
-                    ) : product.type === "service" ? (
-                      <Wrench size={42} strokeWidth={1.4} />
-                    ) : (
-                      <PackageCheck size={42} strokeWidth={1.4} />
-                    )}
-                  </div>
                   {product.type !== "server" && product.tag && <Badge>{product.tag}</Badge>}
                 </div>
                 <CardContent>
@@ -529,6 +548,16 @@ export function Storefront({
                     <div>
                       <h3>{product.name}</h3>
                       <p>{product.description}</p>
+                      {product.type === "server" && features.length > 0 && (
+                        <ul className="product-feature-points" aria-label="Server features">
+                          {features.map((feature, idx) => (
+                            <li key={idx} className="product-feature-point">
+                              <Check size={12} className="product-feature-icon" strokeWidth={2.5} />
+                              <span>{feature}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      )}
                     </div>
                     <div className="product-meta">
                       <strong>

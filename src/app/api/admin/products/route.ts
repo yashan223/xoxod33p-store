@@ -33,6 +33,8 @@ function productInput(body: Record<string, unknown>) {
     active: body.active !== false,
     available: body.available !== false,
     tag: typeof body.tag === "string" && body.tag.trim() ? body.tag.trim() : undefined,
+    imageUrl:
+      typeof body.imageUrl === "string" && body.imageUrl.trim() ? body.imageUrl.trim() : undefined,
   };
 }
 
