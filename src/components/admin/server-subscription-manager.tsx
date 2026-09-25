@@ -31,7 +31,6 @@ export function ServerSubscriptionManager({
         `Scanned ${data.totalChecked} servers: ${data.remindersSent} Day 25 reminder email(s) sent, ${data.expiredMarked} marked expired.`,
       );
 
-      // Reload fresh list
       window.location.reload();
     } catch (err) {
       setCheckResult(err instanceof Error ? err.message : "Error running reminder checks.");
@@ -56,11 +55,7 @@ export function ServerSubscriptionManager({
             disabled={isRunningCheck}
             style={{ display: "inline-flex", alignItems: "center", gap: 6 }}
           >
-            {isRunningCheck ? (
-              <RefreshCw size={13} className="spin-icon" />
-            ) : (
-              <Send size={13} />
-            )}
+            {isRunningCheck ? <RefreshCw size={13} className="spin-icon" /> : <Send size={13} />}
             {isRunningCheck ? "Running checks..." : "Check & Send Day 25 Reminders"}
           </button>
         </div>
@@ -123,16 +118,22 @@ export function ServerSubscriptionManager({
                     </div>
                   </td>
                   <td data-label="Days Remaining">
-                    <strong>Day {Math.min(30, sub.daysElapsed)}</strong> of 30 (
-                    {sub.daysRemaining} days left)
+                    <strong>Day {Math.min(30, sub.daysElapsed)}</strong> of 30 ({sub.daysRemaining}{" "}
+                    days left)
                   </td>
                   <td data-label="Status">
                     {sub.isExpired ? (
-                      <span className="admin-status" style={{ background: "#fef2f2", color: "#dc2626", borderColor: "#fecaca" }}>
+                      <span
+                        className="admin-status"
+                        style={{ background: "#fef2f2", color: "#dc2626", borderColor: "#fecaca" }}
+                      >
                         Expired
                       </span>
                     ) : sub.isDay25OrLater ? (
-                      <span className="admin-status" style={{ background: "#fffbeb", color: "#b45309", borderColor: "#fde68a" }}>
+                      <span
+                        className="admin-status"
+                        style={{ background: "#fffbeb", color: "#b45309", borderColor: "#fde68a" }}
+                      >
                         Renewal Due (Day {sub.daysElapsed})
                       </span>
                     ) : (
@@ -141,11 +142,29 @@ export function ServerSubscriptionManager({
                   </td>
                   <td data-label="Day 25 Reminder">
                     {reminderSentDate ? (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#16a34a", fontSize: 11, fontWeight: 600 }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          color: "#16a34a",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
                         <CheckCircle2 size={13} /> Sent on {reminderSentDate}
                       </span>
                     ) : sub.isDay25OrLater && !sub.isExpired ? (
-                      <span style={{ display: "inline-flex", alignItems: "center", gap: 4, color: "#d97706", fontSize: 11, fontWeight: 600 }}>
+                      <span
+                        style={{
+                          display: "inline-flex",
+                          alignItems: "center",
+                          gap: 4,
+                          color: "#d97706",
+                          fontSize: 11,
+                          fontWeight: 600,
+                        }}
+                      >
                         <Clock size={13} /> Due now (Send check)
                       </span>
                     ) : (

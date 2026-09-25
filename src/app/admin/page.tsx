@@ -7,6 +7,7 @@ import {
   Cable,
   Users,
   ArrowUpRight,
+  RefreshCw,
 } from "lucide-react";
 import { getAdminOverview } from "@/server/admin/overview";
 import { listOrders } from "@/server/orders/orders";
@@ -18,8 +19,7 @@ export default async function AdminDashboardPage() {
 
   return (
     <main className="admin-page">
-      {/* KPI Stats Grid */}
-      <section className="admin-stat-grid admin-stat-grid-6">
+      <section className="admin-stat-grid admin-stat-grid-7">
         <Link href="/admin/users" className="admin-stat admin-stat-link">
           <div className="admin-stat-header">
             <Users size={18} />
@@ -74,9 +74,17 @@ export default async function AdminDashboardPage() {
           <strong>{overview.totalOrders}</strong>
           <small>All-time records</small>
         </Link>
+        <Link href="/admin/subscriptions" className="admin-stat admin-stat-link">
+          <div className="admin-stat-header">
+            <RefreshCw size={18} />
+            <ArrowUpRight size={14} className="admin-stat-corner-arrow" />
+          </div>
+          <span>Subscriptions</span>
+          <strong>{overview.activeSubscriptions}</strong>
+          <small>Active server plans</small>
+        </Link>
       </section>
 
-      {/* Recent Orders Activity Panel */}
       <section className="admin-panel admin-activity-panel">
         <div className="admin-panel-header">
           <div>
@@ -119,7 +127,9 @@ export default async function AdminDashboardPage() {
                   <td data-label="Status">
                     <span className="admin-status active">{order.status.replace("_", " ")}</span>
                   </td>
-                  <td data-label="Updated">{new Date(order.updatedAt).toLocaleDateString("en-LK")}</td>
+                  <td data-label="Updated">
+                    {new Date(order.updatedAt).toLocaleDateString("en-LK")}
+                  </td>
                 </tr>
               ))}
             </tbody>

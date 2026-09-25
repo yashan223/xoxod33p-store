@@ -8,6 +8,7 @@ export async function getAdminOverview() {
   const products = database.collection<ProductDocument>("products");
   const orders = database.collection("orders");
   const users = database.collection("users");
+  const subscriptions = database.collection("server_subscriptions");
   const [
     totalProducts,
     activeProducts,
@@ -16,6 +17,7 @@ export async function getAdminOverview() {
     serviceProducts,
     totalOrders,
     totalUsers,
+    activeSubscriptions,
   ] = await Promise.all([
     products.countDocuments(),
     products.countDocuments({ active: true }),
@@ -24,6 +26,7 @@ export async function getAdminOverview() {
     products.countDocuments({ type: "service", active: true }),
     orders.countDocuments(),
     users.countDocuments(),
+    subscriptions.countDocuments({ status: { $ne: "cancelled" } }),
   ]);
 
   return {
@@ -34,6 +37,7 @@ export async function getAdminOverview() {
     serviceProducts,
     totalOrders,
     totalUsers,
+    activeSubscriptions,
   };
 }
 

@@ -10,10 +10,7 @@ import {
 } from "lucide-react";
 import { requireUser } from "@/server/auth/session";
 import { listOrdersForUser } from "@/server/orders/orders";
-import {
-  listSubscriptionsForUser,
-  syncExistingPaidServers,
-} from "@/server/subscriptions/servers";
+import { listSubscriptionsForUser, syncExistingPaidServers } from "@/server/subscriptions/servers";
 import { ServerSubscriptionsCard } from "@/components/dashboard/server-subscriptions-card";
 
 export const dynamic = "force-dynamic";
@@ -106,7 +103,6 @@ export default async function DashboardPage() {
           </div>
         </section>
 
-        {/* Active monthly game servers with Day 25 renewal reminders */}
         <ServerSubscriptionsCard subscriptions={subscriptions} />
 
         <section className="dashboard-panel dashboard-items-panel">

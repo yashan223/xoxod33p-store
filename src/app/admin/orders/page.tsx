@@ -1,27 +1,16 @@
 import Link from "next/link";
 import { requireAdmin } from "@/server/auth/admin";
 import { listOrders } from "@/server/orders/orders";
-import {
-  listAllServerSubscriptions,
-  syncExistingPaidServers,
-} from "@/server/subscriptions/servers";
-import { ServerSubscriptionManager } from "@/components/admin/server-subscription-manager";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOrdersPage() {
   await requireAdmin();
-  await syncExistingPaidServers().catch(() => {});
-  const [orders, subscriptions] = await Promise.all([
-    listOrders(),
-    listAllServerSubscriptions(),
-  ]);
+  const orders = await listOrders();
 
   return (
     <main className="admin-page">
-      <ServerSubscriptionManager subscriptions={subscriptions} />
-
-      <section className="admin-panel order-table-panel" style={{ marginTop: 24 }}>
+      <section className="admin-panel order-table-panel">
         <div className="admin-panel-header">
           <div>
             <span className="admin-kicker">Fulfillment queue</span>
@@ -58,7 +47,9 @@ export default async function AdminOrdersPage() {
                   <td data-label="Status">
                     <span className="admin-status active">{order.status.replace("_", " ")}</span>
                   </td>
-                  <td data-label="Updated">{new Date(order.updatedAt).toLocaleDateString("en-LK")}</td>
+                  <td data-label="Updated">
+                    {new Date(order.updatedAt).toLocaleDateString("en-LK")}
+                  </td>
                 </tr>
               ))}
             </tbody>
