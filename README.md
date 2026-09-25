@@ -47,7 +47,6 @@ The app will be available at http://localhost:4000.
 - `npm run format` - Format files with Prettier
 - `npm run db:up` - Start local MongoDB container
 - `npm run db:down` - Stop local MongoDB container
-- `npm run db:seed` - Seed initial catalog data
 
 ## Tech Stack
 
